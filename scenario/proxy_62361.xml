@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE scenario SYSTEM "sipp.dtd">
+
+<scenario name="Basic Sipstone UAC">
+
+  <recv request="NOTIFY">
+  </recv>
+
+  <recv request="INVITE">
+  </recv>
+
+  <pause milliseconds="2000"/>
+  
+  <send>
+    <![CDATA[
+      SIP/2.0 200 OK
+      ${last_Via}
+      ${last_From}
+      ${last_To};tag=${pid}
+      ${last_Call_ID}
+      ${last_CSeq}
+      ${last_Contact}
+      Content-Length: 0
+      Expires: 3600
+    ]]>
+  </send>
+
+
+</scenario>

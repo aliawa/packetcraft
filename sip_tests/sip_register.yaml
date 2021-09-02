@@ -1,0 +1,41 @@
+# mode=record in c2s
+# mode=record in s2c
+# destination is the server address
+# first rtp from client to server
+# second rtp from server to client
+
+flows:
+ - name: 'c2s'
+   proto: udp
+   hw_src: '02:10:CA:B0:7D:E7'
+   intf: eth1
+   src: 192.168.1.1
+   sport: 5050
+   dst: 10.1.1.1
+   dport: 7070
+
+
+ - name: 's2c'
+   proto: udp
+   intf: eth2
+   dst: 192.168.1.1
+   dport: 5050
+   src: 10.1.1.1
+   sport: 7070
+
+packets: 
+ - flow: 'c2s'
+   delay: 0 
+   type: text
+   data: |-
+       REGISTER sip:abc.com SIP/2.0
+       Via: SIP/2.0/TCP 192.168.1.1:5060;branch=z9hG4bK-d8754z
+       From: "3773343918" <sip:3773343918@206.229.26.61:5060>;tag=d4493449
+       To: "3773343918" <sip:3773343918@206.229.26.61:5060>
+       Call-ID: ZTk4Zjc5NzE5YWZiZWIyZGFiZmE2YzUyZDEyNTc0ZDM.
+       CSeq: 1 REGISTER
+       Contact: <sip:3773343918@192.168.1.1:5060;transport=TCP>
+       Max-forwards: 70
+       Expires: 3600
+       Content-Length: 0
+     

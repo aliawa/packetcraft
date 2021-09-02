@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE scenario SYSTEM "sipp.dtd">
+
+
+<scenario name="Basic Sipstone UAC">
+  <send segs="324,139,68" order="1,2,3">
+    <![CDATA[
+      REFER sip:12.0.2.114 SIP/2.0
+      Via: SIP/2.0/TCP 192.168.0.113:53653;branch=z9hG4bK402f4846
+      From: <sip:20bbc0200f84@192.168.0.113>;tag=20bbc0200f84000e37cca877-45afabcd
+      To: <sip:12.0.2.114>
+      Call-ID: 20bbc020-0f84000c-3058259f-2bf2ef96@192.168.0.113
+      Date: Mon, 21 Jul 2014 12:55:18 GMT
+      CSeq: 1000 REFER
+      User-Agent: Cisco-CP8941/9.4.2
+      Expires: 10
+      Max-Forwards: 70
+      Contact: <sip:20bbc0200f84@192.168.0.113:53653>
+      Require: norefersub
+      Referred-By: <sip:20bbc0200f84@192.168.0.113>
+      Refer-To: cid:448534ba@192.168.0.113
+      Content-Id: <448534ba@192.168.0.113>
+      Allow: ACK,BYE,CANCEL,INVITE,NOTIFY,OPTIONS,REFER,REGISTER,UPDATE,SUBSCRIBE
+      Content-Length: 1253
+      Content-Type: application/x-cisco-alarm+xml
+      Content-Disposition: session;handling=required
+
+      <?xml version="1.0" encoding="UTF-8"?>
+      <x-cisco-alarm>
+      <Alarm Name="LastOutOfServiceInformation">
+      <ParameterList>
+      <String name="DeviceName">SEP20bbc0200f84</String>
+      <String name="DeviceIPv4Address">192.168.0.113/24</String>
+      <String name="IPv4DefaultGateway">192.168.10.1</String>
+      <String name="DeviceIPv6Address">::0</String>
+      <String name="IPv6DefaultGateway"></String>
+      <String name="ModelNumber">CP-8941</String>
+      <String name="NeighborIPv4Address">10.2.74.25</String>
+      <String name="NeighborIPv6Address"></String>
+      <String name="NeighborDeviceID">dccec1b43e7a</String>
+      <String name="NeighborPortID">fa2</String>
+      <Enum name="DHCPv4Status">1</Enum>
+      <Enum name="DHCPv6Status">3</Enum>
+      <Enum name="TFTPCfgStatus">1</Enum>
+      <Enum name="DNSStatusUnifiedCM1">1</Enum>
+      <String name="VoiceVLAN">4095</String>
+      <String name="UnifiedCMIPAddress">12.0.2.114</String>
+      <String name="LocalPort">59084</String>
+      <String name="TimeStamp">0</String>
+      <Enum name="ReasonForOutOfService">105</Enum>
+      <String name="LastProtocolEventSent">REGISTER sip:12.0.2.114 SIP/2.0  Cseq:101 REGISTER CallId:20bbc020-0f840002-6834feb0-2c29276f@192.168.0.113</String>
+      <String name="LastProtocolEventRecv"></String>
+      </ParameterList>
+      </Alarm>
+      </x-cisco-alarm>REFER sip:12.0.2.114 SIP/2.0
+      Via: SIP/2.0/TCP 192.168.0.113:53653;branch=z9hG4bK1f18d0c1
+      From: <sip:20bbc0200f84@192.168.0.113>;tag=20bbc0200f84000f113a5935-6b37c4de
+      To: <sip:12.0.2.114>
+      Call-ID: 20bbc020-0f84000d-1dd6e744-73288d56@192.168.0.113
+      Date: Mon, 21 Jul 2014 12:55:18 GMT
+      CSeq: 1000 REFER
+      User-Agent: Cisco-CP8941/9.4.2
+      Expires: 10
+      Max-Forwards: 70
+      Contact: <sip:20bbc0200f84@192.168.0.113:53653>
+      Require: norefersub
+      Referred-By: <sip:20bbc0200f84@192.168.0.113>
+      Refer-To: cid:151ead3d@192.168.0.113
+      Co
+    ]]>
+  </send>
+
+</scenario>
+

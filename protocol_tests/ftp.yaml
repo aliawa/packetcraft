@@ -1,0 +1,79 @@
+
+flows:
+ - name: 'c2s'
+   proto: 'tcp'
+   intf: 'eth1'
+   src: '192.168.1.1'
+   sport: 5050
+   dst: '10.1.1.1'
+   dport: 21
+
+ - name: 's2c'
+   proto: 'tcp'
+   intf: 'eth2'
+   src: '10.1.1.1'
+   sport: 21
+   dst: '192.168.1.1'
+   dport: 5050
+
+
+scenario: 
+ # Handshake
+ - flow: 'c2s'
+   action: 'send'
+   flags: S
+
+ - flow: 's2c'
+   action: 'recv'
+   flags: S
+   update: True
+
+ - flow: 's2c'
+   action: 'send'
+   flags: SA
+
+ - flow: 'c2s'
+   action: 'recv'
+   flags: SA
+
+ # FTP session  
+ - action: 'send'
+   flow: 'c2s'
+   type: text
+   data: |-
+     USER aawais
+
+ - action: 'recv'
+   flow: 's2c'
+   match: 'USER.*'
+
+ - action: 'delay'
+   timeout: 500
+
+ - action: 'send'
+   flow: 's2c'
+   type: text
+   data: |-
+     331 Enter password.
+
+ - action: 'recv'
+   flow: 'c2s'
+
+ - action: 'send'
+   flow: 'c2s'
+   type: text
+   data: |-
+     PORT 192,168,1,1,219,57
+
+ - flow: 's2c'
+   action: 'recv'
+   match: 'PORT.*'
+
+ - action: 'delay'
+   timeout: 500
+
+ - flow: 's2c'
+   action: 'send'
+   type: text
+   data: |-
+     200 PORT subcommand request successful.

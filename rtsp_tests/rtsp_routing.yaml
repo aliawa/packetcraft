@@ -1,0 +1,27 @@
+# mac: mac address corresponding to ip, like arp table
+# dst-dev: the device to use to reach the ip
+# dev: the address is assigned to this device
+# mac address for a network, for example 10.2.0.0/16, is like specifying a gateway
+
+'192.168.1.1': 
+    mac: 00:50:56:81:56:b7
+    dev: eth1
+    dst-dev: eth2
+'192.168.100.1': 
+    mac: 00:50:56:81:56:b7
+    dev: eth1
+    dst-dev: eth2
+'10.2.0.0/16':
+    mac: 00:50:56:81:56:b7
+    dst-dev: eth2
+'10.1.1.1':
+    mac: 00:50:56:81:bf:e3
+    dev: eth2
+    dst-dev: eth1
+'51.91.11.76':
+    mac: 00:50:56:81:bf:e3
+    dev: eth2
+    dst-dev: eth1
+'224.2.0.1':
+    mac: 01:00:5e:02:00:01
+    dst-dev: eth2

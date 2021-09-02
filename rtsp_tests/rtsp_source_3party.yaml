@@ -1,0 +1,150 @@
+
+flows:
+ - name: 'c2s'
+   proto: 'tcp'
+   src: '192.168.1.1'
+   sport: 5050
+   dst: '10.1.1.1'
+   dport: 7070
+
+ - name: 's2c'
+   proto: 'tcp'
+   src: '10.1.1.1'
+   sport: 7070
+
+ - name: 's2c_rtp'
+   proto: 'udp'
+   src: '51.91.11.76'
+   sport: 3880
+
+ - name: 'c2s_rtp'
+   proto: 'udp'
+   src: '192.168.1.1'
+   sport: '3840'
+
+ - name: 's2c_rtcp'
+   proto: 'udp'
+   src: '51.91.11.76'
+   sport: 3881
+
+ - name: 'c2s_rtcp'
+   proto: 'udp'
+   src: '192.168.1.1'
+   sport: '3841'
+
+
+scenario: 
+ - flow: 'c2s'
+   action: 'send'
+   flags: S
+
+ - flow: 's2c'
+   action: 'recv'
+   flags: S
+   exec:
+       - 's2c.dst=IP.src'
+       - 's2c.dport=TCP.sport'
+
+
+ - flow: 's2c'
+   action: 'send'
+   flags: SA
+
+
+ - flow: 'c2s'
+   action: 'recv'
+   flags: SA
+
+
+ - flow: 'c2s'
+   action: 'send'
+   type: text
+   data: |-
+        SETUP rtsp://18.130.20.194:1199/e04bbfab-STBId=01899752772 RTSP/1.0
+        CSeq: 2
+        User-Agent: eventIS_VOD_V1
+        Transport: MP2T/AVP/UDP;unicast;client_port=3840-3841
+
+
+ - action: 'recv'
+   flow: 's2c'
+   match: 'SETUP.*RTSP/1.0'
+   search: 
+    - 'Transport:.*client_port=(?P<client_rtp>\d+)(?:-(?P<client_rtcp>\d+))?'
+   exec: 
+    - 's2c_rtp.dport=client_rtp'
+    - 's2c_rtp.dst=IP.src'
+    - 's2c_rtcp.dport=client_rtcp'
+    - 's2c_rtcp.dst=IP.src'
+
+
+ - flow: 's2c'
+   action: 'send'
+   type: text
+   data: |-
+        RTSP/1.0 200 OK
+        CSeq: 2
+        Session: S_873a79fac3f98568e83eefe7637f1568
+        Location: rtsp://18.130.20.194:5005/
+        ControlSession: C_58b9bd9c8dd429497b3922c23b11b152
+        Transport: MP2T/AVP/UDP;unicast;client_port={client_rtp}-{client_rtcp};source=51.91.11.76;server_port=3880-3881
+        Duration: 139
+        Bookmark: 0
+
+ - flow: 'c2s'
+   action: 'recv'
+   type: text
+   search: 
+    - 'Transport:.*source=(?P<source>[^;]+);server_port=(?P<server_rtp>\d+)(?:-(?P<server_rtcp>\d+))?'
+   exec: 
+    - 'c2s_rtp.dport=server_rtp'
+    - 'c2s_rtp.dst=source'
+    - 'c2s_rtcp.dport=server_rtcp'
+    - 'c2s_rtcp.dst=source'
+ 
+
+
+ - action: send
+   flow: 's2c_rtp'
+   type: binary
+   data: !!binary |
+    gIjm/QAAAPDe4O6P1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
+
+
+ - action: recv
+   flow: 'c2s_rtp'
+   type: binary
+
+
+ - action: send
+   flow: 'c2s_rtp'
+   type: binary
+   data: !!binary |
+    gIjm/QAAAPDe4O6P1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
+
+
+ - action: recv
+   flow: 's2c_rtp'
+   type: binary
+
+ - action: send
+   flow: 's2c_rtcp'
+   type: binary
+   data: !!binary |
+     gckAB5SJhVomFWpSAAAAAAAAAAAAAAAAAAAAAAgABAiBygADlImFWgEEUFZTUwAA
+
+ - action: recv
+   flow: 'c2s_rtcp'
+   type: binary
+
+
+ - action: send
+   flow: 'c2s_rtcp'
+   type: binary
+   data: !!binary |
+     gckAB5SJhVomFWpSAAAAAAAAAAAAAAAAAAAAAAgABAiBygADlImFWgEEUFZTUwAA
+
+ - action: recv
+   flow: 's2c_rtcp'
+   type: binary
+

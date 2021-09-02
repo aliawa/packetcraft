@@ -1,0 +1,146 @@
+
+flows:
+ - name: 'c2s'
+   proto: 'tcp'
+   src: '192.168.1.1'
+   sport: 5050
+   dst: '10.1.1.1'
+   dport: '7070'
+
+ - name: 's2c'
+   proto: 'tcp'
+   src: '10.1.1.1'
+   sport: '7070'
+
+ - name: 's2c_rtp'
+   proto: 'udp'
+   src: '10.1.1.1'
+   sport: '5000'
+
+ - name: 'c2s_rtp'
+   proto: 'udp'
+   src: '192.168.1.1'
+   sport: '3056'
+
+ - name: 's2c_rtcp'
+   proto: 'udp'
+   src: '10.1.1.1'
+   sport: '5001'
+
+ - name: 'c2s_rtcp'
+   proto: 'udp'
+   src: '192.168.1.1'
+   sport: '3057'
+
+
+scenario: 
+ - flow: 'c2s'
+   action: 'send'
+   flags: S
+
+ - flow: 's2c'
+   action: 'recv'
+   flags: S
+   exec:
+       - 's2c.dst=IP.src'
+       - 's2c.dport=TCP.sport'
+
+
+ - flow: 's2c'
+   action: 'send'
+   flags: SA
+
+
+ - flow: 'c2s'
+   action: 'recv'
+   flags: SA
+
+
+ - flow: 'c2s'
+   action: 'send'
+   type: text
+   data: |-
+     SETUP rtsp://audio.example.com/twister/audio.en RTSP/1.0
+     CSeq: 1
+     Transport: RTP/AVP/UDP;unicast;client_port={c2s_rtp.sport}-{c2s_rtcp.sport}
+
+
+ - action: 'recv'
+   flow: 's2c'
+   match: 'SETUP.*RTSP/1.0'
+   search: 
+    - 'Transport:.*client_port=(?P<client_rtp>\d+)(?:-(?P<client_rtcp>\d+))?'
+   exec: 
+    - 's2c_rtp.dport=client_rtp'
+    - 's2c_rtp.dst=IP.src'
+    - 's2c_rtcp.dport=client_rtcp'
+    - 's2c_rtcp.dst=IP.src'
+
+
+ - flow: 's2c'
+   action: 'send'
+   type: text
+   data: |-
+     RTSP/1.0 200 OK
+     CSeq: 1
+     Session: 12345678
+     Transport: RTP/AVP/UDP;unicast;client_port={client_rtp}-{client_rtcp};server_port={s2c_rtp.sport}-{s2c_rtcp.sport}
+    
+
+ - flow: 'c2s'
+   action: 'recv'
+   type: text
+   search: 
+    - 'Transport:.*server_port=(?P<server_rtp>\d+)(?:-(?P<server_rtcp>\d+))?'
+   exec: 
+    - 'c2s_rtp.dport=server_rtp'
+    - 'c2s_rtp.dst=IP.src'
+    - 'c2s_rtcp.dport=server_rtcp'
+    - 'c2s_rtcp.dst=IP.src'
+ 
+
+
+ - action: send
+   flow: 's2c_rtp'
+   type: binary
+   data: !!binary |
+    gIjm/QAAAPDe4O6P1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
+
+
+ - action: recv
+   flow: 'c2s_rtp'
+   type: binary
+
+
+ - action: send
+   flow: 'c2s_rtp'
+   type: binary
+   data: !!binary |
+    gIjm/QAAAPDe4O6P1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
+
+
+ - action: recv
+   flow: 's2c_rtp'
+   type: binary
+
+ - action: send
+   flow: 's2c_rtcp'
+   type: binary
+   data: !!binary |
+     gckAB5SJhVomFWpSAAAAAAAAAAAAAAAAAAAAAAgABAiBygADlImFWgEEUFZTUwAA
+
+ - action: recv
+   flow: 'c2s_rtcp'
+   type: binary
+
+
+ - action: send
+   flow: 'c2s_rtcp'
+   type: binary
+   data: !!binary |
+     gckAB5SJhVomFWpSAAAAAAAAAAAAAAAAAAAAAAgABAiBygADlImFWgEEUFZTUwAA
+
+ - action: recv
+   flow: 's2c_rtcp'
+   type: binary
+
