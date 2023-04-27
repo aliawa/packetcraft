@@ -1,0 +1,14 @@
+param:
+    ruri_ip: '12.0.2.114'
+    ruri_port: '5060'
+    via_ip: 122.100.200.115
+    via_port: '50060'
+    contact_ip: 122.100.200.115
+    contact_port: '50060'
+    sdp_l: '150'
+    sdp_c: 122.100.200.115
+    sdp_o: 122.100.200.115
+    sdp_m: '61000'
+    seq: 66666
+    ctrl_reg_seq: 68081
+    reg_plen: 368

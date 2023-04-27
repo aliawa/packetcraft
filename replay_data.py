@@ -1,33 +1,20 @@
 #!/usr/bin/python
 
 import argparse
-import time
 import yaml
-import threading
 import queue
 import textwrap
 import logging
 import ipaddress
 import inspect
-
 from scapy.all import *
-
 import pdb
 
-# -----------------------------------------------------------
-#                            Globals
-# -----------------------------------------------------------
-rcvqueue = queue.Queue()                        # receive queue
-l7data={}                                       # global Layer 7 data 
-routing={}                                      # global routing table
-mylog = logging.getLogger('replay_data')        # Logger
-mylog.setLevel(logging.DEBUG)
-pktlog = open('pktlog', 'w')
 
 # -----------------------------------------------------------
 #                          Configuration 
 # -----------------------------------------------------------
-RCV_TIMEOUT=30                                  # timeout in seconds
+RCV_TIMEOUT=10 # timeout in seconds
 
 
 # -----------------------------------------------------------
@@ -35,17 +22,32 @@ RCV_TIMEOUT=30                                  # timeout in seconds
 # -----------------------------------------------------------
 
 class Flow:
-    def __init__(self, src, sport, dst, dport, proto):
-        self.intf = ip2dev(src)
-        self.src = src
-        self.sport = sport
-        self.dst = dst
-        self.dport = dport
-        self.seq = 0
-        self.ack = 0
-        self.src_mac = ip2mac(src)
-        self.ipid = random.randint(1,100)
-        self.proto = proto
+    def __init__(self, fl):
+        self.proto   = fl['proto']
+        self.src     = fl['src']
+        self.intf    = ip2dev(fl['src'])
+        self.src_mac = ip2mac(fl['src'])
+        self.ipid    = random.randint(1,100)
+        self.seq     = 0
+        self.ack     = 0
+        self.ooq     = {}   # out of order queue
+
+        if fl['sport'] == 'random':
+            self.sport   = random.randint(3000,65535)
+        else:
+            self.sport   = str(fl['sport'])
+        if 'dst' in fl:
+            self.dst = fl['dst']
+        if 'dport' in fl:
+            self.dport = str(fl['dport'])
+        if 'tos' in fl:
+            self.tos = fl['tos']
+        if 'mss' in fl:
+            self.mss = fl['mss']
+
+    def __repr__(self):
+        d = {x:getattr(self,x) for x in dir(self) if not x.startswith('__')}
+        return d.__str__()
 
 
 class Error(Exception):
@@ -58,17 +60,6 @@ class NoRoute(Error):
         super().__init__(message)
 
 
-def setup_flows(cfg_flows):
-    intfs = set()
-    hosts = set()
-    flows = {}
-    for fl in cfg_flows:
-        newFl = flows[fl['name']] = Flow(fl['src'], fl['sport'], fl.get('dst',None), fl.get('dport',None), fl['proto']);
-        intfs.add(newFl.intf)
-        hosts.add(fl['src'])
-    
-    return flows, list(intfs), list(hosts)
-
 
 
 
@@ -76,252 +67,435 @@ def setup_flows(cfg_flows):
 #                                 ACTIONS
 # --------------------------------------------------------------------------
 
-def log_action(act, pkt):
-    if act['action'] == 'delay':
+def log_action(act, fl, pkt):
+    if act == 'delay':
         # data is timeout
-        mylog.info("{:<6} pause {}ms".format(".....", act['timeout']))
+        actlog.info("{:<6} pause {}ms".format(".....", act))
         return
 
-    if act['action'] == 'send':
+    if act == 'send':
         prefix = "---->"
-    elif act['action'] == 'recv':
+    elif act == 'recv':
         prefix = "<----"
+    elif act == 'create':
+        prefix = "-----"
 
-    fl_name = act['flow']
+    s = "{} [{}]".format(act, fl)
     if (Raw in pkt):
-        if act.get('type') == "binary":
-            mylog.info(f"{prefix:<6}{fl_name:<10} binary")
+        actlog.info("{:<6}{:<15}{}".format(prefix, s, pkt[Raw].load.decode('utf8').splitlines()[0][:26]))
+    else:
+        if TCP in pkt:
+            actlog.info("{:<6}{:<15}[{}] Seq:{} A:{}".format(prefix, s, pkt.sprintf('%TCP.flags%'),
+                pkt.seq, pkt.ack))
         else:
-            mylog.info("{:<6}{:<10} {}".format(prefix, fl_name, pkt[Raw].load.decode('utf8').splitlines()[0][:26]))
-    elif 'flags' in act:
-        mylog.info("{:<6}{:<10} {}".format(prefix, fl_name, act['flags']))
+            actlog.info("{:<6}{:<15}".format(prefix, s))
 
 
-def do_delay(act, flows):
-    log_action(act, None)
+
+def do_delay(act, c):
+    log_action("delay", None, None)
     time.sleep(act['timeout']/1000)
+    return c+1
 
 
-def do_recv(act, flows):
-    mylog.debug("{} on intf {}".format(inspect.stack()[0][3], act['flow']))
-    fl = flows[act['flow']]
+def l3_l4_match(pkt, fl, act):
+    if (fl.intf != pkt.sniffed_on):
+        genlog.debug("intf no match expecting {} != pkt {}".format(fl.intf, pkt.sniffed_on))
+        return False
+    else:
+        genlog.debug("intf match expecting {} = pkt {}".format(fl.intf, pkt.sniffed_on))
+
+    if (fl.src and fl.src != pkt[IP].dst):
+        genlog.debug("dst no match {} != pkt {}".format(fl.src, pkt[IP].dst))
+        return False
+
+    if (fl.proto == 'tcp'):
+        if (not pkt.haslayer(TCP)):
+            genlog.debug("proto no match, expecting TCP")
+            return False
+        if (fl.sport and int(fl.sport) != int(pkt[TCP].dport)):
+            genlog.debug("packet dport no match expecting {} != pkt dport {}".format(fl.sport, pkt[TCP].dport))
+            return False
+    elif (fl.proto == 'udp'):
+        if (not pkt.haslayer(UDP)):
+            genlog.debug("proto no match, expecting UDP")
+            return False
+        if (fl.sport and int(fl.sport) != int (pkt[UDP].dport)):
+            genlog.debug("packet dort no match expecting {} != pkt dport {}".format(fl.sport, pkt[UDP].dport))
+            return False
+
+    if ("flags" in act  and act['flags'] != pkt[TCP].flags):
+        genlog.debug("flags no match, expecting {}".format(pkt[TCP].flags))
+        return False
+
+    return True
+
+
+def update_l3_l4(fl, pkt):
+    sseq = endseq = pkt[TCP].seq
+    if TCP in pkt: 
+        if 'S' in pkt[TCP].flags or 'F' in pkt[TCP].flags:
+            endseq = sseq + 1
+            assert not Raw in pkt   # not expecting data in FIN or SYN packet
+        elif Raw in pkt:
+            endseq = sseq + len(pkt[Raw].load) 
+            genlog.debug(f"payload in packet, seq {sseq}-{endseq-1}")
+
+        # update receive next sequence number
+        if sseq == fl.ack:
+            fl.ack = endseq
+            genlog.debug(f"seq match {sseq} now expecting {fl.ack}")
+            for i in list(fl.ooq):
+                if fl.ack == i:
+                    fl.ack=fl.ooq[i]
+                    del fl.ooq[i]
+                elif fl.ack > i:
+                    genlog.debug(f"remove illegal seq nr. {i} from ooq")
+                    del fl.ooq[i]
+
+        else:
+            fl.ooq[sseq]=endseq 
+            genlog.debug(f"out of order packet with seq nr {sseq}")
+
+
+
+
+def l7_match(pkt, fl, act):
+    assert 'match' in act
+    if (Raw in pkt):
+        patrn = re.compile(r'\{([A-Za-z][^}]+)\}')
+        a1 = patrn.sub(lambda m: flds_get_val(m.group(1)), act['match'])
+        genlog.debug(f"match string: '{a1}'")
+        if (not re.match(a1, pkt[Raw].load.decode('utf8'))):
+            genlog.warning("match '{}' failed in '{}'".format(a1, pkt[Raw].load.decode('utf8')))
+            return False
+    else:
+        genlog.warning("match '{}' failed: No L7 data in pkt".format(act['match']))
+        return False
+
+    return True
+
+
+
+def l7_search(pkt, fl, act):
+    assert 'search' in act
+    if (Raw in pkt):
+        for itm in act['search']:
+            genlog.debug(f"search pattern:{itm}") 
+            m = re.search(itm, pkt[Raw].load.decode('utf8'))
+            if m:
+                genlog.debug("groupdict:{}".format(m.groupdict()))
+                for key,val in m.groupdict().items():
+                    genlog.debug(f"search got {key}={val}")
+                dicts['payload'].update(m.groupdict())
+            else:
+                genlog.warning(f"[!] Warning: search failed {itm}")
+    else:
+        genlog.warning("[!] Warning: search failed because pkt has no payload")
+
+
+def echo(pkt, fl, act):
+    assert 'echo' in act
+    print(act['echo'])
+
+
+def flds_get_val(var):
+    if var[0] == "'" or var.isdigit():
+        if var.isdigit():
+            return int(var)
+        else:
+            return var
+    elif "." in var:
+        fld_d,_,fld_n = var.partition('.')
+        if fld_d in dicts['flows'].keys():
+            return str(getattr(dicts['flows'][fld_d], fld_n))
+        else:
+            return dicts[fld_d][fld_n]
+    else:
+        return dicts['payload'][var]
+
+       
+        
+
+def update_flow(pkt, fl, act):
+    assert 'exec' in act
+    assert 'pkt' in dicts, "pkt dictionary is required"
+    for itm in act['exec']:
+        cmd = itm.partition('=')
+        lhs = cmd[0].partition('.')     # <flow_name>, '.', <Flow attribute>
+        rhs = cmd[2].strip()
+
+        # if condition implementation
+        m=re.match(r'{\s*(?P<fld1>[^ :]+)\s*:\s*(?P<fld2>[^ }]+)\s*}', rhs)
+        if m :
+            flds = m.groupdict()
+        else:
+            flds = {'fld1':rhs}
+
+        for i in flds.values():
+            val = flds_get_val(i)
+            if val: break
+    
+        if not val:
+            genlog.error(f"[!] Warning: key {flds.values()} not found")
+            raise(ValueError)
+        else:
+            setattr(dicts['flows'][lhs[0]], lhs[2], val)
+            genlog.debug(f"set attribute: Flow['{lhs[0]}'].{lhs[2]} = {val}")
+
+
+
+
+def l7_verify(pkt, fl, act):
+    assert 'verify' in act
+    assert isinstance(act['verify'], list), 'Verify is not a list'
+    assert 'payload' in dicts, 'Payload dictionary is required'
+    for itm in act['verify']:
+        cmd = re.split(r'\s*==\s*', itm)
+        assert len(cmd) <= 2
+
+        if '.' in cmd[0]:
+            lhs = cmd[0].partition('.')
+            lhs_d,_,lhs_n = lhs
+        else:
+            lhs_d = 'payload'
+            lhs_n = cmd[0]
+        if not lhs_d in dicts:
+            genlog.error(f"[!] Error: dict '{lhs_d}' not found")
+            raise KeyError
+
+        if dicts[lhs_d][lhs_n] != flds_get_val(cmd[1]):
+            genlog.info(f"verification failed: {lhs_d}.{lhs_n} != {flds_get_val(cmd[1])}, found:{dicts[lhs_d][lhs_n]}")
+            raise Error("Verify failed")
+        else:
+            genlog.info(f"verified: {lhs_d}.{lhs_n} == {flds_get_val(cmd[1])}")
+
+
+def update_dicts(pkt):
+    dicts['pkt'] = {}
+    dicts['payload']={}
+
+    if IP in pkt:
+        dicts['pkt']['src'] = pkt[IP].src
+        dicts['pkt']['dst'] = pkt[IP].src
+    if TCP in pkt:
+        dicts['pkt']['sport'] = pkt[TCP].sport
+        dicts['pkt']['dport'] = pkt[TCP].dport
+        dicts['pkt']['seq'] = pkt[TCP].seq
+    elif UDP in pkt:
+        dicts['pkt']['sport'] = pkt[UDP].sport
+        dicts['pkt']['dport'] = pkt[UDP].dport
+    if Raw in pkt:
+        dicts['payload']['len'] = len(pkt.load.decode('utf8'))
+    else:
+        dicts['payload']['len'] = 0
+
+
+
+
+def do_recv(act, c):
+    fl = dicts['flows'][act['flow']]
+    genlog.debug("\n{} on intf {}".format(inspect.stack()[0][3], fl.intf))
     to = act['timeout'] if 'timeout' in act else RCV_TIMEOUT
 
-    try:
-        while True:
+    while True:
+        try:
             pkt = rcvqueue.get(block=True, timeout=to)
-            if (fl.intf != pkt.sniffed_on):
-                mylog.debug("intf no match expecting {} != pkt {}".format(fl.intf, pkt.sniffed_on))
-                continue 
+        except queue.Empty:
+            genlog.critical ("receive failed")
+            raise Error("receive timeout")
+
+        if l3_l4_match(pkt, fl, act) == True:
+            log_action("recv", act['flow'], pkt)
+            update_l3_l4(fl,pkt)
+        else:
+            continue
+
+        if 'match' in act: 
+            if l7_match(pkt, fl, act):
+                genlog.info(f"match success: '{act['match']}'")
             else:
-                mylog.debug("intf match expecting {} = pkt {}".format(fl.intf, pkt.sniffed_on))
-
-            if (fl.src and fl.src != pkt[IP].dst):
-                mylog.debug("dst no match {} != pkt {}".format(fl.src, pkt[IP].dst))
                 continue
 
-            if (fl.proto == 'tcp'):
-                if (not pkt.haslayer(TCP)):
-                    mylog.debug("proto no match, expecting TCP")
-                    continue
-                if (fl.sport and int(fl.sport) != int(pkt[TCP].dport)):
-                    mylog.debug("port no match expecting {} != pkt {}".format(fl.sport, pkt[TCP].dport))
-                    continue
+        update_dicts(pkt)
 
-            if (fl.proto == 'udp'):
-                if (not pkt.haslayer(UDP)):
-                    mylog.debug("proto no match, expecting UDP")
-                    continue
-                if (fl.sport and int(fl.sport) != int (pkt[UDP].dport)):
-                    mylog.debug("port no match expecting {} != pkt {}".format(fl.sport, pkt[UDP].dport))
-                    continue
+        if ("echo" in act):
+            echo(pkt, fl, act)
+        if ("search" in act):
+            l7_search(pkt, fl, act)
+        if "exec" in act:
+            update_flow(pkt, fl, act)
+        if "verify" in act:
+            l7_verify(act, fl, act)
 
-            if ("flags" in act  and act['flags'] != pkt[TCP].flags):
-                mylog.debug("flags no match, expecting {}".format(pkt[TCP].flags))
-                continue
+        unknown_a = [ a for a in act.keys() if a not in ['flow','search','verify','exec','flags','match','echo']]
+        for x in unknown_a:
+            genlog.warning(f"WARNING: Unknown action:{x}")
 
-            if ("match" in act):
-                if (not Raw in pkt):
-                    continue
-                if (not re.match(act['match'], pkt[Raw].load.decode('utf8'))):
-                    mylog.debug("rcv match failed")
-                    continue
+        return c+1
 
-            if ("search" in act):
-                if (Raw in pkt):
-                    mylog.debug("search {}".format(act['search']))
-                    for itm in act['search']:
-                        mylog.debug("itm {}".format(itm))
-                        m = re.search(itm, pkt[Raw].load.decode('utf8'))
-
-                        if m:
-                            mylog.debug("groupdict:{}".format(m.groupdict()))
-                            for key,val in m.groupdict().items():
-                                mylog.debug("search got {}={}".format(key, val))
-                            l7data.update(m.groupdict())
-                        else:
-                            mylog.warning("[!] Warning: search failed")
-
-
-            # All matches succecceeded.
-
-            if "exec" in act:
-                fields = {}
-                if IP in pkt:
-                    fields['IP.src'] = pkt[IP].src
-                    fields['IP.dst'] = pkt[IP].src
-                if TCP in pkt:
-                    fields['TCP.sport'] = pkt[TCP].sport
-                    fields['TCP.dport'] = pkt[TCP].dport
-                if UDP in pkt:
-                    fields['UDP.sport'] = pkt[UDP].sport
-                    fields['UDP.dport'] = pkt[UDP].dport
-                fields.update(l7data)
-
-                for itm in act['exec']:
-                    cmd = itm.partition('=')
-                    lhs = cmd[0].partition('.')
-                    fld = cmd[2].strip()
-                    if fld[0]=='{':
-                        fld = fld.strip('{}')
-                        var = fld.partition(':')
-                        fld = var[0] if var[0] in fields else var[2]
-                    
-                    if fld[0]=="'":
-                        setattr(flows[lhs[0]], lhs[2], fld.strip("'"))
-                    else:
-                        if fld in fields:
-                            setattr(flows[lhs[0]], lhs[2], fields[fld])
-                        else:
-                            mylog.warning(f"[!] Warning: key not found {fld}")
-
-                    mylog.debug("set attribute: {},{},{}".format(lhs[0], lhs[2], fld))
-
-
-            if TCP in pkt: 
-                if Raw in pkt:
-                    fl.ack += len (pkt[Raw].load)
-                elif 'S' in pkt[TCP].flags:
-                    fl.ack += 1
-
-
-            log_action(act, pkt)
-            return
-
-    except Empty:
-        mylog.critical ("receive failed")
-        raise Error("receive timeout")
 
 
 
 def ip2mac(ip):
-    ipadr = ipaddress.ip_address(ip)
-    for i in routing:
-        if ipadr in ipaddress.ip_network(i):
-            return routing[i]['mac']
+    for dev,val in routing['interfaces'].items():
+        if ip in val['ips']:
+            return val['mac']
     raise Error (f"[x] No mac for {ip}")
 
 
 def ip2dev(ip):
-    ipadr = ipaddress.ip_address(ip)
-    for i in routing:
-        if ipadr in ipaddress.ip_network(i):
-            return routing[i]['dev']
+    for dev,val in routing['interfaces'].items():
+        if ip in val['ips']:
+            return dev
     raise Error (f"[x] No device for {ip}")
 
 
-def ip2dst_dev(ip):
+def ip2route(ip):
     ipadr = ipaddress.ip_address(ip)
-    for i in routing:
-        if ipadr in ipaddress.ip_network(i):
-            return routing[i]['dst-dev']
+    for net in routing['routing']:
+        if ipadr in ipaddress.ip_network(net):
+            return routing['routing'][net]
     raise Error (f"No route to {ip}")
 
 
-class field_val:
-    def __init__(self, flows, l7data):
-        self.flows = flows
-        self.l7data = l7data
 
-    def __call__(self, m):
-        if '.' in m.group(1):
-            a = m.group(1).split('.')
-            return getattr(self.flows[a[0]], a[1])
-        else:
-            return self.l7data[m.group(1)]
+def create_packet(act):
+    genlog.debug("{} called from {}".format(inspect.stack()[0][3],inspect.stack()[1][3]))
 
-
-         
-def do_send(act, flows):
-    mylog.debug("{} called from {}".format(inspect.stack()[0][3],inspect.stack()[1][3]))
-
-    fl = flows[act['flow']]
+    fl = dicts['flows'][act['flow']]
     if (fl.dst == None):
-        mylog.error("[x] Error: No destination ip for {}".format(act['flow']))
+        genlog.error("[x] Error: No destination ip for {}".format(act['flow']))
         raise Error ("No destination ip for {}".format(act['flow']))
     if (fl.dport == None):
-        mylog.error ("[x] Error: No destination port for {}".format(act['flow']))
+        genlog.error ("[x] Error: No destination port for {}".format(act['flow']))
         raise Error ("No destination port for {}".format(act['flow']))
 
     # Ether/IP
-    ip_layr = Ether(src=fl.src_mac, dst=(ip2mac(fl.dst))) / IP(src=fl.src,dst=fl.dst) 
+    ip_layr = Ether(src=fl.src_mac, dst=(ip2route(fl.dst)['next-hop'])) / IP(src=fl.src,dst=fl.dst) 
     ip_layr[IP].id = fl.ipid
-    fl.ipid += fl.ipid
+    fl.ipid += 1
+    if hasattr(fl, 'tos'):
+        ip_layr[IP].tos = fl.tos
+
 
     # udp/tcp
     if (fl.proto == "tcp"):
-        pkt = ip_layr/TCP(sport=int(fl.sport), dport=int(fl.dport))
+        pkt = ip_layr/TCP(sport=int(fl.sport), dport=int(fl.dport), ack=fl.ack, seq=fl.seq, window=65535)
     else:
         pkt = ip_layr/UDP(sport=int(fl.sport), dport=int(fl.dport))
 
+
     if act.get('flags',None):
         pkt[TCP].flags= act['flags']
-        fl.seq=1
-        if 'A' in act['flags']:
-            fl.ack=1
-            pkt[TCP].ack= fl.ack
-
+        if 'S' in act['flags']:
+            fl.seq=1
+            if hasattr(fl, 'mss'):
+                pkt[TCP].options = [('MSS',fl.mss)]
     # Raw
-    elif act['type'] == "text":
+    if 'data' in act:
+        if type(act['data']) == str:
+            patrn = re.compile(r'\{([^}]+)\}')
+            a1 = patrn.sub(lambda m: flds_get_val(m.group(1)), act['data'])
+            data = "".join(a1.split('\n'))
 
-        fields = field_val(flows, l7data)
-        patrn = re.compile(r'\{([^}]+)\}')
-        a1 = patrn.sub(fields, act['data'])
-        a2 = a1.split('\n')
-        data = "\r\n".join([ x.strip() for x in a2 ])
-        data += "\r\n";
-        pkt = pkt/data
+            # replace literal \r\n 
+            data = data.replace(r'\r','\r')
+            data = data.replace(r'\n','\n')
+            pkt = pkt/data
+            genlog.debug(f"payload size: {len(data)}")
 
-        if pkt.haslayer(TCP):
-            pkt[TCP].flags='PA'
-            pkt[TCP].seq = fl.seq
-            fl.seq+=len(data)
-            pkt[TCP].ack = fl.ack
+            if pkt.haslayer(TCP):
+                pkt[TCP].flags='PA'
+                fl.seq+=len(data)
 
-    elif act['type'] == "binary":
-        pkt = pkt/act['data']
+        elif type(act['data']) == bytes:
+            pkt = pkt/act['data']
 
-        if (pkt.haslayer(TCP)):
-            pkt[TCP].flags='PA'
-            fl.seq+=len(act['data'])
+            if (pkt.haslayer(TCP)):
+                pkt[TCP].flags='PA'
+                fl.seq+=len(act['data'])
 
+        else:
+            raise Error("Unknown send data type")
+
+    return pkt
+
+
+def do_send(act, c):
+    genlog.debug("\n{} called from {}".format(inspect.stack()[0][3],inspect.stack()[1][3]))
+
+    if 'name' in act:
+        pkt = saved_pkts[act['name']]
     else:
-        raise Error(f"Unknown send type {act['type']}")
-        return
+        pkt = create_packet(act)
 
-    intf = ip2dst_dev(fl.dst)
+    fl = dicts['flows'][act['flow']]
+    intf = ip2route(fl.dst)['dev']
 
     if TCP in pkt:
-        mylog.debug("send to {}:{} intf {}".format(pkt[IP].dst, pkt[TCP].dport, intf))
+        genlog.debug("send to {}:{} intf {}".format(pkt[IP].dst, pkt[TCP].dport, intf))
     elif UDP in pkt:
-        mylog.debug("send to {}:{} intf {}".format(pkt[IP].dst, pkt[UDP].dport, intf))
+        genlog.debug("send to {}:{} intf {}".format(pkt[IP].dst, pkt[UDP].dport, intf))
 
     sendp(pkt, iface=intf, verbose=False)
-    log_action(act, pkt)
+    log_action("send", act['flow'], pkt)
+
+    if 'save' in act:
+        saved_pkts[act['save']] = pkt
+
+    if ("echo" in act):
+        echo(pkt, fl, act)
+
+    return c+1
 
 
-def default_action(act, flows):
-    raise Error(f"Unknown action {act['action']}")
+def do_create(act, c):
+    genlog.debug("{} called from {}".format(inspect.stack()[0][3],inspect.stack()[1][3]))
+    pkt = create_packet(act)
+    if 'name' in act:
+        saved_pkts[act['name']] = pkt
+    else:
+        genlog.error('name field is required')
+        raise Error(f"Missing required field:name")
+
+    if ("echo" in act):
+        echo(pkt, fl, act)
+
+    log_action("create", act['flow'], pkt)
+    return c+1
+         
+
+
+def do_loop_start(act, c):
+    if not 'loop' in dicts:
+        dicts['loop'] = {}
+
+    if 'jump' in dicts['loop']:
+        raise Error('Nested loops are not allowed')
+    if 'count' in act:
+        dicts['loop']['count'] = act['count']-1
+    else:
+        raise Error("count is mandatory in loop")
+    dicts['loop']['jump'] = c+1
+    return c+1
+
+
+
+def do_loop_end(act, c):
+    if not 'count' in dicts['loop']:
+        raise Error("loop-end without loop-start")
+
+    if dicts['loop']['count'] > 0:
+        dicts['loop']['count'] -= 1
+        return dicts['loop']['jump']
+    else:
+        del (dicts['loop']['jump'])
+        del (dicts['loop']['count'])
+        return c+1
+
+
+
 
 
 # --------------------------------------------------------------------------
@@ -329,18 +503,21 @@ def default_action(act, flows):
 # --------------------------------------------------------------------------
 
 actions = {
-        "delay": do_delay,
-        "send" : do_send,
-        "recv" : do_recv
+        "delay"      : do_delay,
+        "send"       : do_send,
+        "recv"       : do_recv,
+        "create"     : do_create,
+        "loop-start" : do_loop_start,
+        "loop-end"   : do_loop_end
         }
 
-def run_scenario(scenario, flows):
-    for s in scenario:
-        cb = actions.get(s['action'], default_action)
-        cb(s, flows)
-    
 
-        
+def run_scenario(scenario):
+    cur  = 0
+    end  = len(scenario)
+    while cur < end:
+        act, val = next(iter(scenario[cur].items()))
+        cur = actions[act](val, cur)
 
 
 
@@ -348,39 +525,27 @@ def run_scenario(scenario, flows):
 #           Add support for include in yaml files
 # ---------------------------------------------------------------
 
-
 class Loader(yaml.SafeLoader):
-
     def __init__(self, stream):
-
         self._root = os.path.split(stream.name)[0]
-
         super(Loader, self).__init__(stream)
 
     def include(self, node):
-
         filename = os.path.join(self._root, self.construct_scalar(node))
-
         with open(filename, 'r') as f:
             return yaml.load(f, Loader)
 
 Loader.add_constructor('!include', Loader.include)
 
 
+
 # ---------------------------------------------------------------
 #                            Receiver
 # ---------------------------------------------------------------
 
-
-
-def printpkt(pkt):
-
-    rcvqueue.put(pkt)
-    original_stdout = sys.stdout
-    sys.stdout = pktlog
-
+def pkt_dbg_print(pkt):
     if (pkt.haslayer(TCP)):
-        print("{}: {}:{} -> {}:{} {}".format(
+        pktlog.debug("{}: {}:{} -> {}:{} {}".format(
             pkt.sniffed_on,
             pkt[IP].src, 
             pkt[TCP].sport, 
@@ -388,7 +553,7 @@ def printpkt(pkt):
             pkt[TCP].dport, 
             pkt.sprintf('%TCP.flags%')))
     elif (pkt.haslayer(UDP)):
-        print("{}: {}:{} -> {}:{}".format(
+        pktlog.debug("{}: {}:{} -> {}:{}".format(
             pkt.sniffed_on,
             pkt[IP].src,
             pkt[UDP].sport,
@@ -397,12 +562,90 @@ def printpkt(pkt):
 
     if (pkt.haslayer(Raw)):
         try:
-            print(textwrap.indent(pkt.load.decode('utf8'), '    '))
-
+            pktlog.debug(textwrap.indent(pkt.load.decode('utf8'), '    '))
         except UnicodeDecodeError: 
             pass
 
-    sys.stdout = original_stdout 
+
+def pkt_cb(pkt):
+    rcvqueue.put(pkt)
+    if pktlog.isEnabledFor(logging.DEBUG):
+        pkt_dbg_print(pkt)
+
+
+
+def setup_logging(log_level):
+    global genlog
+    global actlog
+    global pktlog
+
+    logging.getLogger("scapy").setLevel(log_level)
+    conf.verb=0
+
+    # General console logging handler
+    genlog = logging.getLogger('replay_data') 
+    loghdlr = logging.StreamHandler()
+    genlog.addHandler(loghdlr)
+    logformtr = logging.Formatter('       %(message)s')
+    loghdlr.setFormatter(logformtr)
+    genlog.setLevel(log_level)
+
+    # Actions console logging handler
+    actlog = logging.getLogger('replay_data_act') # Logger
+    loghdlr2 = logging.StreamHandler()
+    actlog.addHandler(loghdlr2)
+    actlog.setLevel(log_level)
+
+    # packets log, all sniffed packets
+    pktlog = logging.getLogger('replay_data_pkt') # Logger
+    loghdlr3 = logging.FileHandler("packet.log")
+    pktlog.addHandler(loghdlr3)
+    pktlog.setLevel(log_level)
+
+def init(logl):
+    setup_logging(logl)
+
+def setup(scenario_f, routes_f, params_f, pcap_f):
+    global dicts
+    global routing
+    global scenario
+    global saved_pkts
+    global fname
+    global sniffer
+    global rcvqueue
+
+    with open(scenario_f, 'r') as f:
+        scen_dict = yaml.load(f, Loader)
+
+    with open(routes_f, 'r') as f:
+        routing = yaml.load(f, Loader)
+
+    dicts = {}
+    if params_f:
+        with open(params_f, 'r') as f:
+            dicts.update(yaml.safe_load(f))
+
+    rcvqueue       = queue.Queue()  
+    saved_pkts     = {}
+    dicts['flows'] = { name:Flow(fl) for name, fl in scen_dict['flows'].items() }
+    fname          = pcap_f
+
+    intfs = { fl.intf for fl in dicts['flows'].values() }
+    hosts = { fl.src for fl in dicts['flows'].values() }
+    fltr=' or '.join(map(lambda x: "host "+x, list(hosts)))
+    sniffer = AsyncSniffer(prn=pkt_cb, filter=fltr, iface=list(intfs), store=(fname != None))
+    sniffer.start()
+    return scen_dict['scenario']
+   
+
+def stop():
+    if sniffer:
+        pktlst = sniffer.stop()
+        if (fname):
+            actlog.info(f"pcap saved: {fname}")
+            wrpcap(fname, pktlst)
+
+
 
 
 # ---------------------------------------------------------------
@@ -410,57 +653,52 @@ def printpkt(pkt):
 # ---------------------------------------------------------------
 
 if __name__ == '__main__':
-
     parser = argparse.ArgumentParser(description="execute tests")
     parser.add_argument('-t', '--testfile', help='testfile name')
     parser.add_argument('-s', '--savepcap', action='store_true', help='save pcap file')
     parser.add_argument('-l', '--log', choices=['DEBUG','INFO','WARNING','ERROR','CRITICAL'], help='Set logging level', default='CRITICAL')
     parser.add_argument('-r', '--routes', help='routing file')
+    parser.add_argument('-p', '--params', help='parameter file')
+
+    # This is needed otherwise packet will appear twice in pcap
+    conf.sniff_promisc=0
+    conf.promisc=0
 
     args=parser.parse_args()
-
-    logging.getLogger("scapy").setLevel(args.log)
-    conf.verb=0
-
-    loghdlr = logging.StreamHandler()
-    loghdlr.setLevel(args.log)
-    mylog.addHandler(loghdlr)
+    init(getattr(logging, args.log))
 
     with open(args.testfile, 'r') as f:
         dictionary = yaml.load(f, Loader)
 
     with open(args.routes, 'r') as f:
         routing = yaml.load(f, Loader)
-    
+
+    dicts = {}
+    if args.params:
+        with open(args.params, 'r') as f:
+            dicts.update(yaml.safe_load(f))
+
+    if args.savepcap:
+        fname_b = os.path.basename(args.testfile)
+        fname = os.path.splitext(fname_b)[0] + "_send.pcap"
+    else:
+        fname = None
+
+
+
+    scenario = setup(args.testfile, args.routes, args.params, fname)
+    time.sleep(3)
+
     try:
-        flows, intfs, hosts = setup_flows(dictionary['flows'])
-
-        sendpcap = None
-        if args.savepcap:
-            fname = os.path.splitext(args.testfile)[0] + "_send.pcap"
-            sendpcap = PcapWriter(fname)
-
-        # This is needed otherwise packet will appear twice in pcap
-        conf.sniff_promisc=0
-        conf.promisc=0
-
-        fltr=' or '.join(map(lambda x: "host "+x, hosts))
-        a = AsyncSniffer(prn=printpkt, filter=fltr, iface=intfs, store=args.savepcap)
-        a.start()
-        time.sleep(3)
-
-        run_scenario(dictionary['scenario'], flows)
+        run_scenario(scenario)
 
     except KeyError as inst:
-        mylog.critical ("KeyError: {}".format(inst))
+        genlog.critical ("KeyError: {}".format(inst))
         raise
     except Error as err:
-        mylog.critical ("Error: {}".format(err))
-        raise
+        genlog.critical ("Error: {}".format(err))
     finally:
-        pktlst = a.stop()
-        if (args.savepcap):
-            wrpcap(fname, pktlst)
+        stop()
 
 
 

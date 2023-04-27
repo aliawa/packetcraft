@@ -1,0 +1,8 @@
+param:
+    ruri_ip: '12.0.2.114'
+    ruri_port: '5060'
+    via_ip: 192.168.0.113
+    via_port: '5060'
+    contact_ip: 192.168.0.113
+    contact_port: '5060'
+    sdp_l: '10220'

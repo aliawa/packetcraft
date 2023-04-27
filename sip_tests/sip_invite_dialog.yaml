@@ -1,39 +1,29 @@
-# mode=record in c2s
-# mode=record in s2c
-# destination is the server address
-# first rtp from client to server
-# second rtp from server to client
 
 flows:
  - name: 'c2s'
    proto: udp
-   intf: eth1
    src: 192.168.1.1
-   src-natted: 10.2.2.2
    sport: 5050
    dst: 10.1.1.1
    dport: 5060
 
  - name: 's2c'
    proto: udp
-   intf: eth2
    src: 10.1.1.1
    sport: 5060
-   dst: 10.2.2.2
-   dport: 15060
 
  - name: 'c2s_2'
    proto: udp
    intf: eth1
    src: 192.168.1.1
-   src-natted: 10.2.2.2
    sport: 5090
    dst: 10.1.1.1
    dport: 5060
 
-packets: 
+
+scenario: 
  - flow: 'c2s'
-   delay: 0 
+   action: 'send'
    type: text
    data: |-
       INVITE sip:7405557000@10.1.1.1:5060;user=phone SIP/2.0
@@ -67,7 +57,15 @@ packets:
 
 
  - flow: 's2c'
-   delay: 0 
+   action: 'recv'
+   match: 'INVITE.*SIP/2.0'
+   exec:
+       - 's2c.dst=IP.src'
+       - 's2c.dport=TCP.sport'
+
+
+ - flow: 's2c'
+   action: 'send'
    type: text
    data: |-
         SIP/2.0 200 OK
@@ -99,8 +97,20 @@ packets:
         a=rtpmap:18 G729/8000
         a=rtpmap:101 telephone-event/8000
 
+
+ - action: 'recv'
+   flow: 's2c'
+        
+   match: 'SIP/2.0 200 OK'
+   search: 
+    - 'Contact:.*<sip:[^@]@(?P<contact_ip>[\d.]):(?P<contact_port>\d+))?'
+   exec: 
+    - 'c2s_2.dport=contact_port'
+    - 'c2s_2.dst=contact_ip
+
+
  - flow: 'c2s_2'
-   delay: 2 
+   action: 'send'
    type: text
    data: |-
         ACK sip:7405557000@10.1.1.1:5060;user=phone SIP/2.0

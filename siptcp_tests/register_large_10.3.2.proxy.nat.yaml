@@ -1,0 +1,477 @@
+flows:
+  'c2s':
+     proto: tcp
+     src: 192.168.0.113
+     sport: 'random'
+     dst: 12.0.2.114
+     dport: 5060
+
+  's2c':
+     proto: tcp
+     src: 12.0.2.114
+     sport: 5060
+
+
+scenario:
+- send:
+    flow: c2s
+    flags: S
+- recv:
+    flow: s2c
+    flags: S
+    exec:
+    - s2c.dst=pkt.src
+    - s2c.dport=pkt.sport
+- send:
+    flow: s2c
+    flags: SA
+- recv:
+    flow: c2s
+    flags: SA
+- send:
+    flow: c2s
+    data: |-
+      REGISTER sip:12.0.2.114 SIP/2.0\r\n
+      Via: SIP/2.0/TCP 192.168.0.113:5060;branch=z9hG4bK78a9f86a\r\n
+      From: <sip:1008@12.0.2.114>;tag=e8edf3a83d2a003944f30904-23d359b0\r\n
+      To: <sip:1008@12.0.2.114>\r\n
+      Max-Forwards: 70\r\n
+      Call-ID: e8edf3a8-3d2a0012-4228674d-0404cb7f@192.168.60.168\r\n
+      Date: Mon, 03 Oct 2016 23:13:27 GMT\r\n
+      CSeq: 133 REGISTER\r\n
+      User-Agent: Cisco-CP8941/9.4.2\r\n
+      Contact: <sip:adc1c8bf-dd4b-efd3-8d9b-3c219334055b@192.168.0.113:5060;transport=tcp>;+sip.instance="<urn:uuid:00000000-0000-0000-00000-e8edf3a83d2a>";+u.sip!devicename.ccm.cisco.com="SEPE8EDF3A83D2A";+u.sip!model.ccm.cisco.com="586"\r\n
+      Supported: replaces,join,sdp-anat,norefersub,resource-priority,extended-refer,X-cisco-callinfo,X-cisco-serviceuri,X-cisco-escapecodes,X-cisco-service-control,X-cisco-srtp-fallback,X-cisco-monrec,X-cisco-config,X-cisco-sis-7.0.0,X-cisco-xsi-8.5.1\r\n
+      Reason: SIP;cause=200;text="cisco-alarm:24 Name=SEPE8EDF3A83D2A ActiveLoad=SIP894x.9-4-2SR2-2 InactiveLoad=SIP8941_8945.9-3-4-17 Last=phone-reg-rej"\r\n
+      Expires: 3600\r\n
+      Content-Type: multipart/mixed; boundary=uniqueBoundary\r\n
+      Mime-Version: 1.0\r\n
+      Require: INVITE,BYE,INFO\r\n
+      Call-Info: blah blah blah\r\n
+      GeoLocation: blah blah\r\n
+      Geolocation-Routing: not required\r\n
+      Identiy: unknown\r\n
+      Info-Package: attached\r\n
+      MIME-Version: 2.3.4.5 x.y.z.a\r\n
+      History-Info: abc@sip-server.com\r\n
+      Authentication-Info: full authenticated\r\n
+      Content-Length: 10220\r\n
+      P-Charging-Function-Addresses: ccf=192.0.8.1.4.4; ecf=192.0.8.3, ccf-2=192.0.8.2; ecf-2=192.0.8.4\r\n
+      \r\n
+- recv:
+    flow: s2c
+    match: 'REGISTER sip:{param.ruri_ip} SIP/2.0'
+    search: 
+      - 'SIP/2.0/TCP (?P<via_ip>[\d.]+):(?P<via_port>\d+);'
+      - 'Contact:\s*<sip:[^@]+@(?P<contact_ip>[\d.]+):(?P<contact_port>\d+);'
+    verify:
+      - via_ip == param.via_ip
+      - via_port == param.via_port
+      - contact_ip == param.contact_ip 
+      - contact_port == param.contact_port
+- send: 
+    flow: s2c
+    flags: 'A'
+- send: 
+    flow: c2s
+    data: |-
+      <?xml version="1.0" encoding="UTF-8"?>\r\n
+      <x-cisco-remotecc-request>\r\n
+      <optionsind>\r\n
+      <combine max="6">\r\n
+      <remotecc>\r\n
+      <status></status>\r\n
+      </remotecc>\r\n
+      <service-control></service-control>\r\n
+      </combine>\r\n
+      <dialog usage="hook status">\r\n
+      <unot></unot>\r\n
+      <sub></sub>\r\n
+      </dialog>\r\n
+      <dialog usage="shared line">\r\n
+      <unot></unot>\r\n
+      <sub></sub>\r\n
+      </dialog>\r\n
+      <presence usage="blf speed dial">\r\n
+      <unot></unot>\r\n
+      <sub></sub>\r\n
+      </presence>\r\n
+      <joinreq></joinreq>\r\n
+      <cfwdall-anyline></cfwdall-anyline>\r\n
+      <coaching></coaching>\r\n
+      <join-dxfer-policy>same-or-acrossline-enable</join-dxfer-policy>\r\n
+      <oosalarm></oosalarm>\r\n
+      <rpid-orig-called></rpid-orig-called>\r\n
+      <gatewayrecording></gatewayrecording>\r\n
+      <qos-tcl></qos-tcl>\r\n
+      <bfcp></bfcp>\r\n
+      <ix></ix>\r\n
+      </optionsind>\r\n
+      <junk>1234567890123456789012345678901234568901234567890123456890</junk>\r\n
+      <bunk>1234567890123456789012345678901234568901234567890123456890</bunk>\r\n
+      <dunk>1234567890123456789012345678901234568901234567890123456890</dunk>\r\n
+      <runk>1234567890123456789012345678901234568901234567890123456890</runk>\r\n
+      <sunk>1234567890123456789012345678901234568901234567890123456890</sunk>\r\n
+      <random1>abcefghijklmnopqrstumwxyz____zyxwmutsrqponmlkjihgfecba</random1>\r\n
+      <random2>abcefghijklmnopqrstumwxyz____zyxwmutsrqponmlkjihgfecba</random2>\r\n
+      <random3>abcefghijklmnopqrstumwxyz____zyxwmutsrqponmlkjihgfecba</random3>\r\n
+      <random4>abcefghijklmnopqrstumwxyz____zyxwmutsrqponmlkjihgfecba</random4>\r\n
+      <random5>abcde</random5>\r\n
+      </x-cisco-remotecc-request>\r\n
+      \r\n
+      --uniqueBoundary--\r\n
+- send: 
+    flow: c2s
+    data: |-
+      <?xml version="1.0" encoding="UTF-8"?>\r\n
+      <x-cisco-remotecc-request>\r\n
+      <optionsind>\r\n
+      <combine max="6">\r\n
+      <remotecc>\r\n
+      <status></status>\r\n
+      </remotecc>\r\n
+      <service-control></service-control>\r\n
+      </combine>\r\n
+      <dialog usage="hook status">\r\n
+      <unot></unot>\r\n
+      <sub></sub>\r\n
+      </dialog>\r\n
+      <dialog usage="shared line">\r\n
+      <unot></unot>\r\n
+      <sub></sub>\r\n
+      </dialog>\r\n
+      <presence usage="blf speed dial">\r\n
+      <unot></unot>\r\n
+      <sub></sub>\r\n
+      </presence>\r\n
+      <joinreq></joinreq>\r\n
+      <cfwdall-anyline></cfwdall-anyline>\r\n
+      <coaching></coaching>\r\n
+      <join-dxfer-policy>same-or-acrossline-enable</join-dxfer-policy>\r\n
+      <oosalarm></oosalarm>\r\n
+      <rpid-orig-called></rpid-orig-called>\r\n
+      <gatewayrecording></gatewayrecording>\r\n
+      <qos-tcl></qos-tcl>\r\n
+      <bfcp></bfcp>\r\n
+      <ix></ix>\r\n
+      </optionsind>\r\n
+      <junk>1234567890123456789012345678901234568901234567890123456890</junk>\r\n
+      <bunk>1234567890123456789012345678901234568901234567890123456890</bunk>\r\n
+      <dunk>1234567890123456789012345678901234568901234567890123456890</dunk>\r\n
+      <runk>1234567890123456789012345678901234568901234567890123456890</runk>\r\n
+      <sunk>1234567890123456789012345678901234568901234567890123456890</sunk>\r\n
+      <random1>abcefghijklmnopqrstumwxyz____zyxwmutsrqponmlkjihgfecba</random1>\r\n
+      <random2>abcefghijklmnopqrstumwxyz____zyxwmutsrqponmlkjihgfecba</random2>\r\n
+      <random3>abcefghijklmnopqrstumwxyz____zyxwmutsrqponmlkjihgfecba</random3>\r\n
+      <random4>abcefghijklmnopqrstumwxyz____zyxwmutsrqponmlkjihgfecba</random4>\r\n
+      <random5>abcde</random5>\r\n
+      </x-cisco-remotecc-request>\r\n
+      \r\n
+      --uniqueBoundary--\r\n
+- send: 
+    flow: c2s
+    data: |-
+      <?xml version="1.0" encoding="UTF-8"?>\r\n
+      <x-cisco-remotecc-request>\r\n
+      <optionsind>\r\n
+      <combine max="6">\r\n
+      <remotecc>\r\n
+      <status></status>\r\n
+      </remotecc>\r\n
+      <service-control></service-control>\r\n
+      </combine>\r\n
+      <dialog usage="hook status">\r\n
+      <unot></unot>\r\n
+      <sub></sub>\r\n
+      </dialog>\r\n
+      <dialog usage="shared line">\r\n
+      <unot></unot>\r\n
+      <sub></sub>\r\n
+      </dialog>\r\n
+      <presence usage="blf speed dial">\r\n
+      <unot></unot>\r\n
+      <sub></sub>\r\n
+      </presence>\r\n
+      <joinreq></joinreq>\r\n
+      <cfwdall-anyline></cfwdall-anyline>\r\n
+      <coaching></coaching>\r\n
+      <join-dxfer-policy>same-or-acrossline-enable</join-dxfer-policy>\r\n
+      <oosalarm></oosalarm>\r\n
+      <rpid-orig-called></rpid-orig-called>\r\n
+      <gatewayrecording></gatewayrecording>\r\n
+      <qos-tcl></qos-tcl>\r\n
+      <bfcp></bfcp>\r\n
+      <ix></ix>\r\n
+      </optionsind>\r\n
+      <junk>1234567890123456789012345678901234568901234567890123456890</junk>\r\n
+      <bunk>1234567890123456789012345678901234568901234567890123456890</bunk>\r\n
+      <dunk>1234567890123456789012345678901234568901234567890123456890</dunk>\r\n
+      <runk>1234567890123456789012345678901234568901234567890123456890</runk>\r\n
+      <sunk>1234567890123456789012345678901234568901234567890123456890</sunk>\r\n
+      <random1>abcefghijklmnopqrstumwxyz____zyxwmutsrqponmlkjihgfecba</random1>\r\n
+      <random2>abcefghijklmnopqrstumwxyz____zyxwmutsrqponmlkjihgfecba</random2>\r\n
+      <random3>abcefghijklmnopqrstumwxyz____zyxwmutsrqponmlkjihgfecba</random3>\r\n
+      <random4>abcefghijklmnopqrstumwxyz____zyxwmutsrqponmlkjihgfecba</random4>\r\n
+      <random5>abcde</random5>\r\n
+      </x-cisco-remotecc-request>\r\n
+      \r\n
+      --uniqueBoundary--\r\n
+- send: 
+    flow: c2s
+    data: |-
+      <?xml version="1.0" encoding="UTF-8"?>\r\n
+      <x-cisco-remotecc-request>\r\n
+      <optionsind>\r\n
+      <combine max="6">\r\n
+      <remotecc>\r\n
+      <status></status>\r\n
+      </remotecc>\r\n
+      <service-control></service-control>\r\n
+      </combine>\r\n
+      <dialog usage="hook status">\r\n
+      <unot></unot>\r\n
+      <sub></sub>\r\n
+      </dialog>\r\n
+      <dialog usage="shared line">\r\n
+      <unot></unot>\r\n
+      <sub></sub>\r\n
+      </dialog>\r\n
+      <presence usage="blf speed dial">\r\n
+      <unot></unot>\r\n
+      <sub></sub>\r\n
+      </presence>\r\n
+      <joinreq></joinreq>\r\n
+      <cfwdall-anyline></cfwdall-anyline>\r\n
+      <coaching></coaching>\r\n
+      <join-dxfer-policy>same-or-acrossline-enable</join-dxfer-policy>\r\n
+      <oosalarm></oosalarm>\r\n
+      <rpid-orig-called></rpid-orig-called>\r\n
+      <gatewayrecording></gatewayrecording>\r\n
+      <qos-tcl></qos-tcl>\r\n
+      <bfcp></bfcp>\r\n
+      <ix></ix>\r\n
+      </optionsind>\r\n
+      <junk>1234567890123456789012345678901234568901234567890123456890</junk>\r\n
+      <bunk>1234567890123456789012345678901234568901234567890123456890</bunk>\r\n
+      <dunk>1234567890123456789012345678901234568901234567890123456890</dunk>\r\n
+      <runk>1234567890123456789012345678901234568901234567890123456890</runk>\r\n
+      <sunk>1234567890123456789012345678901234568901234567890123456890</sunk>\r\n
+      <random1>abcefghijklmnopqrstumwxyz____zyxwmutsrqponmlkjihgfecba</random1>\r\n
+      <random2>abcefghijklmnopqrstumwxyz____zyxwmutsrqponmlkjihgfecba</random2>\r\n
+      <random3>abcefghijklmnopqrstumwxyz____zyxwmutsrqponmlkjihgfecba</random3>\r\n
+      <random4>abcefghijklmnopqrstumwxyz____zyxwmutsrqponmlkjihgfecba</random4>\r\n
+      <random5>abcde</random5>\r\n
+      </x-cisco-remotecc-request>\r\n
+      \r\n
+      --uniqueBoundary--\r\n
+- send: 
+    flow: c2s
+    data: |-
+      <?xml version="1.0" encoding="UTF-8"?>\r\n
+      <x-cisco-remotecc-request>\r\n
+      <optionsind>\r\n
+      <combine max="6">\r\n
+      <remotecc>\r\n
+      <status></status>\r\n
+      </remotecc>\r\n
+      <service-control></service-control>\r\n
+      </combine>\r\n
+      <dialog usage="hook status">\r\n
+      <unot></unot>\r\n
+      <sub></sub>\r\n
+      </dialog>\r\n
+      <dialog usage="shared line">\r\n
+      <unot></unot>\r\n
+      <sub></sub>\r\n
+      </dialog>\r\n
+      <presence usage="blf speed dial">\r\n
+      <unot></unot>\r\n
+      <sub></sub>\r\n
+      </presence>\r\n
+      <joinreq></joinreq>\r\n
+      <cfwdall-anyline></cfwdall-anyline>\r\n
+      <coaching></coaching>\r\n
+      <join-dxfer-policy>same-or-acrossline-enable</join-dxfer-policy>\r\n
+      <oosalarm></oosalarm>\r\n
+      <rpid-orig-called></rpid-orig-called>\r\n
+      <gatewayrecording></gatewayrecording>\r\n
+      <qos-tcl></qos-tcl>\r\n
+      <bfcp></bfcp>\r\n
+      <ix></ix>\r\n
+      </optionsind>\r\n
+      <junk>1234567890123456789012345678901234568901234567890123456890</junk>\r\n
+      <bunk>1234567890123456789012345678901234568901234567890123456890</bunk>\r\n
+      <dunk>1234567890123456789012345678901234568901234567890123456890</dunk>\r\n
+      <runk>1234567890123456789012345678901234568901234567890123456890</runk>\r\n
+      <sunk>1234567890123456789012345678901234568901234567890123456890</sunk>\r\n
+      <random1>abcefghijklmnopqrstumwxyz____zyxwmutsrqponmlkjihgfecba</random1>\r\n
+      <random2>abcefghijklmnopqrstumwxyz____zyxwmutsrqponmlkjihgfecba</random2>\r\n
+      <random3>abcefghijklmnopqrstumwxyz____zyxwmutsrqponmlkjihgfecba</random3>\r\n
+      <random4>abcefghijklmnopqrstumwxyz____zyxwmutsrqponmlkjihgfecba</random4>\r\n
+      <random5>abcde</random5>\r\n
+      </x-cisco-remotecc-request>\r\n
+      \r\n
+      --uniqueBoundary--\r\n
+- send: 
+    flow: c2s
+    data: |-
+      <?xml version="1.0" encoding="UTF-8"?>\r\n
+      <x-cisco-remotecc-request>\r\n
+      <optionsind>\r\n
+      <combine max="6">\r\n
+      <remotecc>\r\n
+      <status></status>\r\n
+      </remotecc>\r\n
+      <service-control></service-control>\r\n
+      </combine>\r\n
+      <dialog usage="hook status">\r\n
+      <unot></unot>\r\n
+      <sub></sub>\r\n
+      </dialog>\r\n
+      <dialog usage="shared line">\r\n
+      <unot></unot>\r\n
+      <sub></sub>\r\n
+      </dialog>\r\n
+      <presence usage="blf speed dial">\r\n
+      <unot></unot>\r\n
+      <sub></sub>\r\n
+      </presence>\r\n
+      <joinreq></joinreq>\r\n
+      <cfwdall-anyline></cfwdall-anyline>\r\n
+      <coaching></coaching>\r\n
+      <join-dxfer-policy>same-or-acrossline-enable</join-dxfer-policy>\r\n
+      <oosalarm></oosalarm>\r\n
+      <rpid-orig-called></rpid-orig-called>\r\n
+      <gatewayrecording></gatewayrecording>\r\n
+      <qos-tcl></qos-tcl>\r\n
+      <bfcp></bfcp>\r\n
+      <ix></ix>\r\n
+      </optionsind>\r\n
+      <junk>1234567890123456789012345678901234568901234567890123456890</junk>\r\n
+      <bunk>1234567890123456789012345678901234568901234567890123456890</bunk>\r\n
+      <dunk>1234567890123456789012345678901234568901234567890123456890</dunk>\r\n
+      <runk>1234567890123456789012345678901234568901234567890123456890</runk>\r\n
+      <sunk>1234567890123456789012345678901234568901234567890123456890</sunk>\r\n
+      <random1>abcefghijklmnopqrstumwxyz____zyxwmutsrqponmlkjihgfecba</random1>\r\n
+      <random2>abcefghijklmnopqrstumwxyz____zyxwmutsrqponmlkjihgfecba</random2>\r\n
+      <random3>abcefghijklmnopqrstumwxyz____zyxwmutsrqponmlkjihgfecba</random3>\r\n
+      <random4>abcefghijklmnopqrstumwxyz____zyxwmutsrqponmlkjihgfecba</random4>\r\n
+      <random5>abcde</random5>\r\n
+      </x-cisco-remotecc-request>\r\n
+      \r\n
+      --uniqueBoundary--\r\n
+
+
+# Receive empty packets
+#- loop-start:
+#    count: 6
+#- recv: 
+#    flow: s2c
+#- loop-end:
+#    cond: None
+
+
+- send: 
+    flow: c2s
+    data: |-
+      <?xml version="1.0" encoding="UTF-8"?>\r\n
+      <x-cisco-remotecc-request>\r\n
+      <optionsind>\r\n
+      <combine max="6">\r\n
+      <remotecc>\r\n
+      <status></status>\r\n
+      </remotecc>\r\n
+      <service-control></service-control>\r\n
+      </combine>\r\n
+      <dialog usage="hook status">\r\n
+      <unot></unot>\r\n
+      <sub></sub>\r\n
+      </dialog>\r\n
+      <dialog usage="shared line">\r\n
+      <unot></unot>\r\n
+      <sub></sub>\r\n
+      </dialog>\r\n
+      <presence usage="blf speed dial">\r\n
+      <unot></unot>\r\n
+      <sub></sub>\r\n
+      </presence>\r\n
+      <joinreq></joinreq>\r\n
+      <cfwdall-anyline></cfwdall-anyline>\r\n
+      <coaching></coaching>\r\n
+      <join-dxfer-policy>same-or-acrossline-enable</join-dxfer-policy>\r\n
+      <oosalarm></oosalarm>\r\n
+      <rpid-orig-called></rpid-orig-called>\r\n
+      <gatewayrecording></gatewayrecording>\r\n
+      <qos-tcl></qos-tcl>\r\n
+      <bfcp></bfcp>\r\n
+      <ix></ix>\r\n
+      </optionsind>\r\n
+      <junk>1234567890123456789012345678901234568901234567890123456890</junk>\r\n
+      <bunk>1234567890123456789012345678901234568901234567890123456890</bunk>\r\n
+      <dunk>1234567890123456789012345678901234568901234567890123456890</dunk>\r\n
+      <runk>1234567890123456789012345678901234568901234567890123456890</runk>\r\n
+      <sunk>1234567890123456789012345678901234568901234567890123456890</sunk>\r\n
+      <random1>abcefghijklmnopqrstumwxyz____zyxwmutsrqponmlkjihgfecba</random1>\r\n
+      <random2>abcefghijklmnopqrstumwxyz____zyxwmutsrqponmlkjihgfecba</random2>\r\n
+      <random3>abcefghijklmnopqrstumwxyz____zyxwmutsrqponmlkjihgfecba</random3>\r\n
+      <random4>abcefghijklmnopqrstumwxyz____zyxwmutsrqponmlkjihgfecba</random4>\r\n
+      <random5>abcde</random5>\r\n
+      </x-cisco-remotecc-request>\r\n
+      \r\n
+      --uniqueBoundary--\r\n
+
+- recv:
+    flow: s2c
+    match: '\s+10220\r\n'
+- send:
+    flow: s2c
+    flags: A
+- recv:
+    flow: s2c
+    verify: 
+      - payload.len == 1460
+- send:
+    flow: s2c
+    flags: A
+- recv:
+    flow: s2c
+    verify: 
+      - payload.len == 1460
+- send:
+    flow: s2c
+    flags: A
+- recv:
+    flow: s2c
+    verify: 
+      - payload.len == 1460
+- send:
+    flow: s2c
+    flags: A
+- recv:
+    flow: s2c
+    verify: 
+      - payload.len == 1460
+- send:
+    flow: s2c
+    flags: A
+- recv:
+    flow: s2c
+    verify: 
+      - payload.len == 1460
+- send:
+    flow: s2c
+    flags: A
+- recv:
+    flow: s2c
+    verify: 
+      - payload.len == 1460
+- send:
+    flow: s2c
+    flags: A
+- recv:
+    flow: s2c
+    verify: 
+      - payload.len == 109
+- send:
+    flow: s2c
+    flags: A

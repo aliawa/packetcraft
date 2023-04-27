@@ -1,0 +1,265 @@
+
+# REFER is transmitted in 3 segments.
+# First a REFER that does not get split
+# In this scenarios seg_i 1 gets acked separately therefore no
+# issue is seen.
+
+#      refer_1 --> |       
+#                  | --> refer_1
+#                  | <-- Ack refer_1
+#  Ack refer_1 <-- |
+#                  |
+#      seg_i 1 --> |
+#                  | --> seg_o 1 -->
+#                  | <-- Ack seg_o_1
+#  Ack seg_o_1 <-- |
+#                  |
+#      seg_i 2 --> |
+#                  | --> seg_o 2 
+#                  | --> seg_o 3
+#                  |
+#                  | <-- Ack seg_o_2 
+# Ack seg_o_2 <--  |
+#                  | <-- Ack seg_o_3
+# Ack seg_o_3 <--  |
+
+
+flows:
+ - name: 'c2s'
+   proto: 'tcp'
+   src: '7.254.114.221'
+   sport: 51674
+   dst: '7.254.89.39'
+   dport: '5060'
+
+ - name: 's2c'
+   proto: 'tcp'
+   src: '7.254.89.39'
+   sport: '5060'
+
+
+
+scenario: 
+ - flow: 'c2s'
+   action: 'send'
+   flags: S
+
+ - flow: 's2c'
+   action: 'recv'
+   flags: S
+   exec:
+       - 's2c.dst=IP.src'
+       - 's2c.dport=TCP.sport'
+
+ - flow: 's2c'
+   action: 'send'
+   flags: SA
+
+
+ - flow: 'c2s'
+   action: 'recv'
+   flags: SA
+
+
+ - flow: 'c2s'
+   action: 'send'
+   type: text
+   data: |-
+        REFER sip:7.254.80.39 SIP/2.0\r\n
+        Via: SIP/2.0/TCP 7.254.114.221:51674;branch=z9hG4bK689ce218\r\n
+        From: <sip:9802422934@7.254.80.39>;tag=bcc493a4916c000e021219cb-015a58a2\r\n
+        To: <sip:9802422934@7.254.80.39>\r\n
+        Call-ID: bcc493a4-916c007e-5e02e6b2-79a4734d@7.254.114.221\r\n
+        Max-Forwards: 70\r\n
+        Session-ID: 910acecb00105000a000bcc493a4916c;remote=00000000000000000000000000000000\r\n
+        Date: Mon, 28 Jun 2021 19:15:30 GMT\r\n
+        CSeq: 102 REFER\r\n
+        User-Agent: Cisco-CP8841/12.7.1\r\n
+        Contact: <sip:72c46b19-9624-5466-376c-1333c50f72d6@7.254.114.221:51674;transport=tcp>;+sip.instance="<urn:uuid:00000000-0000-0000-0000-bcc493a4916c>";+u.sip!devicename.ccm.cisco.com="SEPBCC493A4916C";+u.sip!model.ccm.cisco.com="683"\r\n
+        Remote-Party-ID: "9802422934" <sip:9802422934@7.254.64.38>;party=calling;id-type=subscriber;privacy=off;screen=yes\r\n
+        Require: norefersub\r\n
+        Refer-To: <urn:X-cisco-remotecc:token-registration>\r\n
+        Referred-By: <sip:9802422934@7.254.64.38>\r\n
+        Content-Length: 0\r\n
+        \r\n
+
+
+ - action: 'recv'
+   flow: 's2c'
+   match: 'REFER.*SIP/2.0'
+   search: 
+     - 'Via: SIP/2.0/TCP (?P<client_ip>[\d.]+):(?P<client_port>\d+);'
+   exec: 
+    - 's2c.dest=client_ip'
+    - 's2c.dport=client_port'
+
+
+ - flow: 's2c'
+   action: 'send'
+   type: text
+   data: |-
+        SIP/2.0 202 Accepted\r\n
+        Via: SIP/2.0/TCP 7.254.114.221:51674;branch=z9hG4bK689ce218\r\n
+        From: <sip:9802422934@7.254.80.39>;tag=bcc493a4916c000e021219cb-015a58a2\r\n
+        To: <sip:9802422934@7.254.80.39>;tag=435562225\r\n
+        Date: Mon, 28 Jun 2021 19:15:30 GMT\r\n
+        Call-ID: bcc493a4-916c007e-5e02e6b2-79a4734d@7.254.114.221\r\n
+        CSeq: 102 REFER\r\n
+        Contact: <sip:7.254.80.39:5060;transport=tcp>\r\n
+        Content-Length: 0\r\n
+        \r\n
+ 
+
+ - flow: 'c2s'
+   action: 'recv'
+   type: text
+   match: 'SIP/2.0 202 Accepted'
+
+ - action: send
+   flow: 'c2s'
+   type: text
+   data: |-
+        REFER sip:7.254.80.39 SIP/2.0\r\n
+        Via: SIP/2.0/TCP 7.254.114.221:51674;branch=z9hG4bK34fba87a\r\n
+        From: "9802422934" <sip:9802422934@7.254.114.221>;tag=bcc493a4916c00115ce324f2-7ada3c08\r\n
+        To: <sip:7.254.80.39>\r\n
+        Call-ID: bcc493a4-916c000b-4841fa70-5efde54d@7.254.114.221\r\n
+        Session-ID: 910acecb00105000a000bcc493a4916c;remote=00000000000000000000000000000000\r\n
+        Date: Mon, 28 Jun 2021 19:15:31 GMT\r\n
+        CSeq: 1000 REFER\r\n
+        User-Agent: Cisco-CP8841/12.7.1\r\n
+        Expires: 10\r\n
+        Max-Forwards: 70\r\n
+        Contact: <sip:72c46b19-9624-5466-376c-1333c50f72d6@7.254.114.221:51674;transport=tcp>;+u.sip!devicename.ccm.cisco.com="SEPBCC493A4916C"\r\n
+        Require: norefersub\r\n
+        Referred-By: "9802422934" <sip:9802422934@7.254.114.221>\r\n
+        Refer-To: cid:45d972a4@7.254.114.221\r\n
+        Content-Id: <45d972a4@7.254.114.221>\r\n
+        Allow: ACK,BYE,CANCEL,INVITE,NOTIFY,OPTIONS,REFER,REGISTER,UPDATE,SUBSCRIBE\r\n
+        Content-Length: 1428\r\n
+        Content-Type: application/x-cisco-alarm+xml\r\n
+        Content-Disposition: session;handling=required\r\n
+        \r\n 
+        <?xml version="1.0" encoding="UTF-8" ?>\n
+        <x-cisco-alarm>\n
+        <Alarm Name="LastOutOfServiceInformation">\n
+        <ParameterList>\n
+        <String name="DeviceName">SEPBCC493A4916C</String>\n
+        <String name="DeviceIPv4Address">7.254.114.221 / 0</String>\n
+        <String name="IPv4DefaultGateway">7.254.114.193</String>\n
+        <String name="DeviceIPv6Address"></String>\n
+        <String name="IPv6DefaultGateway"></String>\n
+        <String name="ModelNumber">CP-8841</String>\n
+        <String name="NeighborIPv4Address">7.254.112.194</String>\n
+        <String name="Neighbo
+
+ - action: recv
+   flow: 's2c'
+   type: text
+   match: 'REFER.*SIP/2.0'
+
+ - action: send
+   flow: 's2c'
+   flags: A
+
+ - action: send
+   flow: 'c2s'
+   type: text
+   data: |-
+        rIPv6Address"></String>\n
+        <String name="NeighborDeviceID"></String>\n
+        <String name="NeighborPortID">GigabitEthernet1/0/</String>\n
+        <Enum name="DHCPv4Status">1</Enum>\n
+        <Enum name="DHCPv6Status">3</Enum>\n
+        <Enum name="TFTPCfgStatus">1</Enum>\n
+        <Enum name="DNSStatusUnifiedCM1">4</Enum>\n
+        <Enum name="DNSStatusUnifiedCM2">4</Enum>\n
+        <Enum name="DNSStatusUnifiedCM3">3</Enum>\n
+        <String name="VoiceVLAN">230</String>\n
+        <String name="UnifiedCMIPAddress">7.254.64.38</String>\n
+        <String name="LocalPort">50774</String>\n
+        <String name="TimeStamp">1624907730</String>\n
+        <Enum name="ReasonForOutOfService">18</Enum>\n
+        <String name="ReasonForOutOfServiceText">LastTimeFailback</String>\n
+        <String name="ActiveInterface">Wired</String>\n
+        <String name="LastProtocolEventSent"></String>\n
+        <String name="LastProtocolEventReceived">Rcvd:SIP/2.0 202 Accepted  Cseq:102 REFER CallId:bcc493a4-916c007e-5e02e6b2-79a4734d@7.254.114.221    </String>\n
+        </ParameterList>\n
+        </Alarm>\n
+        </x-cisco-alarm>
+
+ - action: recv
+   flow: 's2c'
+   type: text
+   match: '1428'
+
+
+ - action: send
+   flow: 's2c'
+   flags: A
+
+
+ - action: recv
+   flow: 's2c'
+   type: text
+
+
+ - action: send
+   flow: 's2c'
+   type: text
+   data: |- 
+        SIP/2.0 202 Accepted\r\n
+        Via: SIP/2.0/TCP 7.254.114.221:51674;branch=z9hG4bK34fba87a\r\n
+        From: "9802422934" <sip:9802422934@7.254.114.221>;tag=bcc493a4916c00115ce324f2-7ada3c08\r\n
+        To: <sip:7.254.80.39>;tag=1657022487\r\n
+        Date: Mon, 28 Jun 2021 19:15:31 GMT\r\n
+        Call-ID: bcc493a4-916c000b-4841fa70-5efde54d@7.254.114.221\r\n
+        CSeq: 1000 REFER\r\n
+        Contact: <sip:7.254.80.39:5060;transport=tcp>\r\n
+        Content-Length: 0\r\n
+        \r\n
+
+ - action: recv
+   flow: 'c2s'
+   type: text
+   match: 'SIP/2.0 202 Accepted'
+
+
+ - action: send
+   flow: 'c2s'
+   type: text
+   data: |-
+        REFER sip:7.254.80.39 SIP/2.0\r\n
+        Via: SIP/2.0/TCP 7.254.114.221:51674;branch=z9hG4bK05676464\r\n
+        From: "9802422934" <sip:9802422934@7.254.114.221>;tag=bcc493a4916c00127dec07cd-6a0a03d6\r\n
+        To: <sip:7.254.80.39>\r\n
+        Call-ID: bcc493a4-916c000c-0aa0618a-10bf4427@7.254.114.221\r\n
+        Session-ID: 910acecb00105000a000bcc493a4916c;remote=00000000000000000000000000000000\r\n
+        Date: Mon, 28 Jun 2021 19:15:31 GMT\r\n
+        CSeq: 1000 REFER\r\n
+        User-Agent: Cisco-CP8841/12.7.1\r\n
+        Expires: 10\r\n
+        Max-Forwards: 70\r\n
+        Contact: <sip:72c46b19-9624-5466-376c-1333c50f72d6@7.254.114.221:51674;transport=tcp>;+u.sip!devicename.ccm.cisco.com="SEPBCC493A4916C"\r\n
+        Require: norefersub\r\n
+        Referred-By: "9802422934" <sip:9802422934@7.254.114.221>\r\n
+        Refer-To: cid:79b1e4ae@7.254.114.221\r\n
+        Content-Id: <79b1e4ae@7.254.114.221>\r\n
+        Allow: ACK,BYE,CANCEL,INVITE,NOTIFY,OPTIONS,REFER,REGISTER,UPDATE,SUBSCRIBE\r\n
+        Content-Length: 1718\r\n
+        Content-Type: application/x-cisco-alarm+xml\r\n
+        Content-Disposition: session;handling=required\r\n
+        \r\n
+        <?xml version="1.0" encoding="UTF-8"?>\n
+        <x-cisco-alarm>\n
+        <Alarm Name="LastOutOfServiceInformation">\n
+        <ParameterList>\n
+        <String name="DeviceName">SEPBCC493A4916C</String>\n
+        <String name="DeviceIPv4Address">7.254.114.221/27</String>\n
+        <String name="IPv4DefaultGateway">7.254.114.193</String>\n
+        <String name="DeviceIPv6Address"></String>\n
+        <String name="IPv6DefaultGateway"></String>\n
+        <String name="ModelNumber">CP-8841</String>\n
+        <String name="NeighborIPv4Address">7.254.112.194</String>\n
+        <String name="NeighborI
+    

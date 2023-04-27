@@ -4,12 +4,10 @@
 # mac address for a network, for example 10.2.0.0/16, is like specifying a gateway
 
 '192.168.1.1': 
-    mac: 00:50:56:9c:03:c7
+    mac: 00:50:56:93:b7:b1
     dev: ens192
     dst-dev: ens224
 '10.1.1.1':
-    mac: 00:50:56:9c:02:e9
+    mac: 00:50:56:93:a3:d4
     dev: ens224
     dst-dev: ens192
-
-

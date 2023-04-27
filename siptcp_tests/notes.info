@@ -1,0 +1,47 @@
+## FW configs for Nat scenarios
+
+debug dataplane nat static-mapping add from-ip 192.168.0.113 from-port 6000 to-ip 122.100.200.115 to-port 61000
+debug dataplane nat static-mapping add from-ip 192.168.0.113 from-port 5060 to-ip 122.100.200.115 to-port 50060
+
+
+
+## Test descriptions
+
+register_large_10.3.0.yaml
+register_large_10.3.1.yaml
+register_large_10.3.2.yaml
+register_large_10.3.3.noproxy.yaml          Assembling 44 segments and sending them after resplitting
+register_large_10.3.5.yaml
+routing_192_0.yaml
+routing_192_1.yaml
+scn_invite_10.1.yaml                        2 segments of body are out of order
+scn_invite_1.yaml                           no problems, standard case
+scn_invite_2.1.yaml                         request-uri after @
+scn_invite_2.yaml                           request-uri ip 
+scn_invite_3.1.yaml                         Via TCP
+scn_invite_3.2.yaml                         Via IP
+scn_invite_3.3.yaml                         Via just before \r\n
+scn_invite_3.4.yaml                         Via after \r, \n in next segment
+scn_invite_3.5.yaml                         After complete Via header
+scn_invite_5.1.1.yaml                       Content-Length just before \r\n
+scn_invite_5.1.yaml                         Content-Length value
+scn_invite_5.2.yaml                         Content-Length after \r
+scn_invite_5.3.yaml                         Content-Length complete 
+scn_invite_5.4.yaml                         Empty line between header and sdb is \r
+scn_invite_5.5.yaml                         Empty line between header and sdb is complete
+scn_invite_5.6.yaml                         c= ip 
+scn_invite_5.7.0.yaml                       Headers after content-length field 
+scn_invite_5.7.1.yaml                       c ./. =IN IP4 192.168.0.113\r\n
+scn_invite_5.7.2.0.yaml                     Break in headers after content-length
+scn_invite_5.7.2.yaml                       From IP
+scn_invite_5.7.3.yaml                       Header after content-length and body is separated
+scn_invite_5.7.4.yaml                       Header after content-length and Contact split after \r
+scn_invite_5.7.5.yaml                       Header after content-length, content-length value is split
+scn_invite_5.8.yaml                         Content-Length: value ./. \r\n
+scn_invite_8.1.yaml                         c= ip is split
+scn_invite_8.2.yaml                         t= value is split
+scn_invite_8.3.yaml                         o= ip is split
+scn_invite_8.4.yaml                         c= ip is split
+scn_invite_8.5.yaml                         Msg in three segments, Subject Header, Content-Length
+scn_invite_8.6.yaml                         Msg in three segments, Contact, end of body
+scn_invite_oo_5.6.yaml                      Body in out of order segments

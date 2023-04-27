@@ -3,13 +3,16 @@
 # dev: the address is assigned to this device
 # mac address for a network, for example 10.2.0.0/16, is like specifying a gateway
 
-'192.168.1.1': 
+'10.76.155.154':
     mac: 00:50:56:9c:03:c7
     dev: ens192
     dst-dev: ens224
-'10.1.1.1':
+
+'10.120.136.63':
     mac: 00:50:56:9c:02:e9
     dev: ens224
     dst-dev: ens192
 
-
+'10.120.128.70':
+    dst-dev: ens192
+    mac: 00:50:56:9c:03:c7
