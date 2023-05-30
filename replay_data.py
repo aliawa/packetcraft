@@ -82,7 +82,13 @@ def log_action(act, fl, pkt):
 
     s = "{} [{}]".format(act, fl)
     if (Raw in pkt):
-        actlog.info("{:<6}{:<15}{}".format(prefix, s, pkt[Raw].load.decode('utf8').splitlines()[0][:26]))
+        lod = pkt[Raw].load
+        if lod.isalpha():
+            actlog.info("{:<6}{:<15}{}".format(prefix, s, lod.decode('utf8').splitlines()[0][:26]))
+        else:
+            byts = [ hex(x).split('x')[-1] for x in lod]
+            actlog.info("{:<6}{:<15}{}".format(prefix, s, byts[:15]))
+        
     else:
         if TCP in pkt:
             actlog.info("{:<6}{:<15}[{}] Seq:{} A:{}".format(prefix, s, pkt.sprintf('%TCP.flags%'),
@@ -132,8 +138,9 @@ def l3_l4_match(pkt, fl, act):
 
 
 def update_l3_l4(fl, pkt):
-    sseq = endseq = pkt[TCP].seq
     if TCP in pkt: 
+        sseq = endseq = pkt[TCP].seq
+
         if 'S' in pkt[TCP].flags or 'F' in pkt[TCP].flags:
             endseq = sseq + 1
             assert not Raw in pkt   # not expecting data in FIN or SYN packet
@@ -212,7 +219,7 @@ def flds_get_val(var):
         else:
             return dicts[fld_d][fld_n]
     else:
-        return dicts['payload'][var]
+        return dicts['payload'].get(var, None)
 
        
         
@@ -286,7 +293,10 @@ def update_dicts(pkt):
         dicts['pkt']['sport'] = pkt[UDP].sport
         dicts['pkt']['dport'] = pkt[UDP].dport
     if Raw in pkt:
-        dicts['payload']['len'] = len(pkt.load.decode('utf8'))
+        try:
+            dicts['payload']['len'] = len(pkt.load.decode('utf8'))
+        except UnicodeDecodeError:
+            dicts['payload']['len'] = len(pkt.load)
     else:
         dicts['payload']['len'] = 0
 
