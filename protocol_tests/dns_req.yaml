@@ -1,0 +1,24 @@
+flows:
+  'c2s':
+     proto: udp
+     src: 192.168.1.1
+     sport: 'random'
+     dst: 10.1.1.1
+     dport: 53
+
+  's2c':
+     proto: udp
+     src: 10.1.1.1
+     sport: 53
+
+scenario:
+- send:
+    flow: c2s
+    data: !!binary |-
+        ATgBAAABAAAAAAAACmFtYW5kYXByb2QFY29hY2QFbG9jYWwAAAEAAQ==
+      
+- recv:
+    flow: s2c
+    exec:
+        - s2c.dst=pkt.src
+        - s2c.dport=pkt.sport

@@ -1,0 +1,41 @@
+flows:
+  'c2s':
+     proto: udp
+     src: 192.168.1.1
+     sport: 'random'
+     dst: 10.1.1.1
+     dport: 53
+
+  's2c':
+     proto: udp
+     src: 10.1.1.1
+     sport: 53
+
+scenario:
+- send:
+    flow: c2s
+    data: !!binary |-
+        ATgBAAABAAAAAAAACmFtYW5kYXByb2QFY29hY2QFbG9jYWwAAAEAAQ==
+      
+- recv:
+    flow: s2c
+    exec:
+        - s2c.dst=pkt.src
+        - s2c.dport=pkt.sport
+
+- send:
+    flow: s2c
+    data: !!binary |-
+        ATiBgAABAAEABgAMCmFtYW5kYXByb2QFY29hY2QFbG9jYWwAAAEAAQphbWFuZGFwcm9kBUNPQUNEwB0
+        AAQABAAAAjQAECkI2EMAdAAIAAQACRm0AGQJhMANvcmcLYWZpbGlhcy1uc3QEaW5mbwDAHQACAAEAAk
+        ZtABUCYjIDb3JnC2FmaWxpYXMtbnN0wB3AHQACAAEAAkZtAAUCZDDAfcAdAAIAAQACRm0ABQJjMMBYw
+        B0AAgABAAJGbQAFAmIwwH3AHQACAAEAAkZtAAUCYTLAWMBVAAEAAQAAI5IABMcTOAHAzgABAAEAAS/J
+        AATH+XABwL0AAQABAAJGbQAExxM2AcB6AAEAAQAAjFoABMf5eAHArAABAAEAAStXAATHEzUBwJsAAQA
+        BAAJGbQAExxM5AcBVABwAAQACRm0AECABBQAADgAAAAAAAAAAAAHAzgAcAAEAAkZtABAgAQUAAEAAAA
+        AAAAAAAAABwL0AHAABAAJGbQAQIAEFAAAMAAAAAAAAAAAAAcB6ABwAAQACRm0AECABBQAASAAAAAAAA
+        AAAAAHArAAcAAEAADzJABAgAQUAAAsAAAAAAAAAAAABwJsAHAABAAJGbQAQIAEFAAAPAAAAAAAAAAAA
+        AQ== 
+
+- recv:
+    flow: c2s
+

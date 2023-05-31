@@ -1,41 +1,37 @@
-# mode=record in c2s
-# mode=record in s2c
-# destination is the server address
-# first rtp from client to server
-# second rtp from server to client
-
+# c2s --> REGISTER
 flows:
- - name: 'c2s'
-   proto: udp
-   hw_src: '02:10:CA:B0:7D:E7'
-   intf: eth1
-   src: 192.168.1.1
-   sport: 5050
-   dst: 10.1.1.1
-   dport: 7070
+  'c2s':
+     proto: udp
+     src: 192.168.1.1
+     sport: 5050
+     dst: 10.1.1.1
+     dport: 5060
+
+  's2c':
+     proto: udp
+     src: 10.1.1.1
+     sport: 5060
+     dst: 192.168.1.1
+     dport: 5050
+
+scenario: 
+- send:
+    flow: 'c2s'
+    data: |-
+      REGISTER sip:7405557000@10.1.1.1:5060;user=phone SIP/2.0\r\n
+      Via: SIP/2.0/UDP 192.168.1.1:5090;branch=z9hG4bKbe15632f914B3568\r\n
+      From: "7012" <sip:7405557012@10.1.1.1:5060>;tag=BA76D475-4FE052EC\r\n
+      To: <sip:7405557000@10.1.1.1:5060;user=phone>\r\n
+      Call-ID: 5a2fb8b1-3c6d8673-82af160a@192.168.1.100\r\n
+      CSeq: 1 REGISTER\r\n
+      Contact: <sip:7405557012@192.168.1.1:7060>\r\n
+      User-agent: PolycomSoundPointIP-SPIP_501-UA/2.0.2.0076\r\n
+      Supported: 100rel\r\n
+      Max-forwards: 70\r\n
+      Content-Length: 0\r\n
+      \r\n
 
 
- - name: 's2c'
-   proto: udp
-   intf: eth2
-   dst: 192.168.1.1
-   dport: 5050
-   src: 10.1.1.1
-   sport: 7070
-
-packets: 
- - flow: 'c2s'
-   delay: 0 
-   type: text
-   data: |-
-       REGISTER sip:abc.com SIP/2.0
-       Via: SIP/2.0/TCP 192.168.1.1:5060;branch=z9hG4bK-d8754z
-       From: "3773343918" <sip:3773343918@206.229.26.61:5060>;tag=d4493449
-       To: "3773343918" <sip:3773343918@206.229.26.61:5060>
-       Call-ID: ZTk4Zjc5NzE5YWZiZWIyZGFiZmE2YzUyZDEyNTc0ZDM.
-       CSeq: 1 REGISTER
-       Contact: <sip:3773343918@192.168.1.1:5060;transport=TCP>
-       Max-forwards: 70
-       Expires: 3600
-       Content-Length: 0
-     
+- recv:
+    flow: s2c
+    match: 'REGISTER sip:'

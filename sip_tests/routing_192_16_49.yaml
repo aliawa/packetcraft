@@ -4,10 +4,10 @@
 # Note: Because of vwire the next-hop mac is the same as actual mac for the ip but it could be different in L3 case
 'routing':
   '192.168.1.1': 
-      next-hop: 00:50:56:93:b7:b1
+      next-hop: 00:50:56:9c:8f:33
       dev: ens224
   '10.1.1.1':
-      next-hop: 00:50:56:93:a3:d4
+      next-hop: 00:50:56:9c:19:13
       dev: ens192
 
 
@@ -16,8 +16,8 @@
 # ip: the list of ips assigned to this interface
 'interfaces':
   'ens192':
-      mac: 00:50:56:93:b7:b1
+      mac: 00:50:56:9c:8f:33
       ips: [ 192.168.1.1 ]
   'ens224': 
-      mac: 00:50:56:93:a3:d4
+      mac: 00:50:56:9c:19:13
       ips: [ 10.1.1.1 ]
