@@ -4,7 +4,7 @@
 
 /data:/ {
     if (index($0,"binary") == 0 ) {
-        p = index($0, "data")
+        p = index($0, "data") - 1
         inblock=1
         printf("%*sdata: |-\n", p, "")
     }
