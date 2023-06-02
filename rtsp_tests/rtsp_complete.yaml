@@ -81,7 +81,6 @@ scenario:
     
 - recv:
    flow: 'c2s'
-   type: text
    search: 
     - 'Transport:.*server_port=(?P<server_rtp>\d+)(?:-(?P<server_rtcp>\d+))?'
    exec: 

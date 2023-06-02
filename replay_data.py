@@ -70,7 +70,7 @@ class NoRoute(Error):
 def log_action(act, fl, pkt):
     if act == 'delay':
         # data is timeout
-        actlog.info("{:<6} pause {}ms".format(".....", act))
+        actlog.info("{:<6} pause {} ms".format(".....", fl))
         return
 
     if act == 'send':
@@ -99,7 +99,7 @@ def log_action(act, fl, pkt):
 
 
 def do_delay(act, c):
-    log_action("delay", None, None)
+    log_action("delay", act['timeout'], None)
     time.sleep(act['timeout']/1000)
     return c+1
 

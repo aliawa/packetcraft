@@ -28,6 +28,14 @@ if __name__ == '__main__':
         del sn["action"]
         if "type" in sn:
             del sn["type"]
+        if "timeout" in sn:
+            tout = sn["timeout"]
+            del sn["timeout"]
+            scenario_new["scenario"].append ({"delay":{'timeout':tout}})
+        if "exec" in sn:
+            for i, str in enumerate(sn["exec"]):
+                sn["exec"][i] = str.replace("IP","pkt").replace("TCP","pkt")
+
         scenario_new["scenario"].append ({sn_name:sn})
         
     print (args.output)
