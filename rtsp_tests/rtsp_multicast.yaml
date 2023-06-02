@@ -1,0 +1,64 @@
+flows:
+  c2s:
+    proto: tcp
+    src: 192.168.1.1
+    sport: 5050
+    dst: 10.1.1.1
+    dport: '7070'
+  s2c:
+    proto: tcp
+    src: 10.1.1.1
+    sport: '7070'
+  s2c_rtp:
+    proto: udp
+    src: 10.1.1.1
+    sport: '5000'
+
+scenario:
+- send:
+    flow: c2s
+    flags: S
+- recv:
+    flow: s2c
+    flags: S
+    exec:
+    - s2c.dst=pkt.src
+    - s2c.dport=pkt.sport
+- send:
+    flow: s2c
+    flags: SA
+- recv:
+    flow: c2s
+    flags: SA
+- send:
+    flow: c2s
+    data: |-
+      SETUP rtsp://live.example.com/concert/audio RTSP/1.0\r\n
+      CSeq: 2\r\n
+      Transport:\r\n
+      RTP/AVP;multicast\r\n
+- recv:
+    flow: s2c
+    match: SETUP.*RTSP/1.0
+- send:
+    flow: s2c
+    data: |-
+      RTSP/1.0 200 OK\r\n
+      CSeq: 2\r\n
+      Transport: RTP/AVP;multicast;destination=224.2.0.1;port=3456-3457;ttl=16\r\n
+      Session: 0456804596\r\n
+- recv:
+    flow: c2s
+    search:
+    - Transport:.*destination=(?P<dest>[^;]+);port=(?P<rtp_port>\d+)(?:-(?P<rtcp_port>\d+))?
+    exec:
+    - s2c_rtp.dport=rtp_port
+    - s2c_rtp.dst=dest
+- send:
+    flow: s2c_rtp
+    data: !!binary |
+      gIjm/QAAAPDe4O6P1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
+      1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
+      1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
+      1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
+      1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
