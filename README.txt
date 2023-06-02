@@ -56,6 +56,13 @@ The flow is like a socket it the both souce and destination are given
 then it is a client socket. If only the src is given then it is a listen 
 socket.
 
+Select random client port
+flows:
+  'c2s':
+     proto: tcp
+     src: 192.168.0.113
+     sport: 'random'
+
 
 Receive Actions
 ----------------------------------------------------------------------
