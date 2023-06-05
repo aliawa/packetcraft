@@ -4,11 +4,11 @@ flows:
     src: 192.168.1.1
     sport: 'random'
     dst: 10.1.1.1
-    dport: 7070
+    dport: 554
   s2c:
     proto: tcp
     src: 10.1.1.1
-    sport: 7070
+    sport: 554 
   s2c_rtp:
     proto: udp
     src: 10.1.1.1
@@ -39,6 +39,7 @@ scenario:
       SETUP rtsp://audio.example.com/twister/audio.en RTSP/1.0\r\n
       CSeq: 1\r\n
       Transport: RTP/AVP/UDP;unicast;client_port={c2s_rtp.sport}-{c2s_rtp.sport + 1}\r\n
+      \r\n
 - recv:
     flow: s2c
     match: SETUP.*RTSP/1.0
@@ -54,6 +55,7 @@ scenario:
       CSeq: 1\r\n
       Session: 12345678\r\n
       Transport: RTP/AVP/UDP;unicast;client_port={client_rtp}-{client_rtcp}\r\n
+      \r\n
 - recv:
     flow: c2s
     exec:

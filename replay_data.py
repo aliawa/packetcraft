@@ -215,11 +215,11 @@ def flds_eval(exp):
             if op == '+':
                 return str(int(flds_get_val(lhs)) + int(flds_get_val(rhs)))
             elif op == '-':
-                return str(int(flds_get_val(lhs))) - int(flds_get_val(rhs)))
+                return str(int(flds_get_val(lhs)) - int(flds_get_val(rhs)))
             elif op == '*':
-                return str(int(flds_get_val(lhs))) / int(flds_get_val(rhs)))
+                return str(int(flds_get_val(lhs)) / int(flds_get_val(rhs)))
             elif op == '/':
-                return str(int(flds_get_val(lhs))) * int(flds_get_val(rhs)))
+                return str(int(flds_get_val(lhs)) * int(flds_get_val(rhs)))
 
     return flds_get_val(exp)
 
