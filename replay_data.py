@@ -206,13 +206,33 @@ def echo(pkt, fl, act):
     print(act['echo'])
 
 
+def flds_eval(exp):
+    lst = exp.split()
+    if len(lst) > 2:
+        lhs,op,rhs = lst
+        ops = set("+-/*")
+        if op in ops:
+            if op == '+':
+                return str(int(flds_get_val(lhs)) + int(flds_get_val(rhs)))
+            elif op == '-':
+                return str(int(flds_get_val(lhs))) - int(flds_get_val(rhs)))
+            elif op == '*':
+                return str(int(flds_get_val(lhs))) / int(flds_get_val(rhs)))
+            elif op == '/':
+                return str(int(flds_get_val(lhs))) * int(flds_get_val(rhs)))
+
+    return flds_get_val(exp)
+
+
 def flds_get_val(var):
     if var[0] == "'" or var.isdigit():
+        print (f"literal:{var}")
         if var.isdigit():
             return int(var)
         else:
             return var
     elif "." in var:
+        print (f"var:{var}")
         fld_d,_,fld_n = var.partition('.')
         if fld_d in dicts['flows'].keys():
             return str(getattr(dicts['flows'][fld_d], fld_n))
@@ -221,7 +241,6 @@ def flds_get_val(var):
     else:
         return dicts['payload'].get(var, None)
 
-       
         
 
 def update_flow(pkt, fl, act):
@@ -406,7 +425,8 @@ def create_packet(act):
     if 'data' in act:
         if type(act['data']) == str:
             patrn = re.compile(r'\{([^}]+)\}')
-            a1 = patrn.sub(lambda m: flds_get_val(m.group(1)), act['data'])
+            #a1 = patrn.sub(lambda m: flds_get_val(m.group(1)), act['data'])
+            a1 = patrn.sub(lambda m: flds_eval(m.group(1)), act['data'])
             data = "".join(a1.split('\n'))
 
             # replace literal \r\n 
@@ -693,7 +713,6 @@ if __name__ == '__main__':
         fname = os.path.splitext(fname_b)[0] + "_send.pcap"
     else:
         fname = None
-
 
 
     scenario = setup(args.testfile, args.routes, args.params, fname)
