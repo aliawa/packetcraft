@@ -2,7 +2,7 @@ flows:
   c2s:
     proto: tcp
     src: 192.168.1.1
-    sport: 5050
+    sport: 'random'
     dst: 10.1.1.1
     dport: '7070'
   s2c:
@@ -43,8 +43,12 @@ scenario:
     flags: SA
 - send:
     flow: c2s
-    data: "SETUP rtsp://18.130.20.194:1199/e04bbfab-STBId=01899752772 RTSP/1.0\nCSeq:\
-      \ 2\nUser-Agent: eventIS_VOD_V1\nTransport: MP2T/AVP/UDP;unicast;destination=192.168.100.1;client_port={c2s_rtp.sport}-{c2s_rtcp.sport}"
+    data: |-
+      SETUP rtsp://18.130.20.194:1199/e04bbfab-STBId=01899752772 RTSP/1.0\r\n
+      CSeq: 2\r\n
+      User-Agent: eventIS_VOD_V1\r\n
+      Transport: MP2T/AVP/UDP;unicast;destination=192.168.100.1;client_port={c2s_rtp.sport}-{c2s_rtcp.sport}\r\n
+      \r\n
 - recv:
     flow: s2c
     match: SETUP.*RTSP/1.0
@@ -57,10 +61,16 @@ scenario:
     - s2c_rtcp.dst={destination:pkt.src}
 - send:
     flow: s2c
-    data: "RTSP/1.0 200 OK\nCSeq: 2\nSession: S_873a79fac3f98568e83eefe7637f1568\n\
-      Location: rtsp://18.130.20.194:5005/\nControlSession: C_58b9bd9c8dd429497b3922c23b11b152\n\
-      Transport: MP2T/AVP/UDP;unicast;destination={destination};client_port={client_rtp}-{client_rtcp};server_port={s2c_rtp.sport}-{s2c_rtcp.sport}\n\
-      Duration: 139\nBookmark: 0"
+    data: |-
+      RTSP/1.0 200 OK\r\n
+      CSeq: 2\r\n
+      Session: S_873a79fac3f98568e83eefe7637f1568\r\n
+      Location: rtsp://18.130.20.194:5005/\r\n
+      ControlSession: C_58b9bd9c8dd429497b3922c23b11b152\r\n
+      Transport: MP2T/AVP/UDP;unicast;destination={destination};client_port={client_rtp}-{client_rtcp};server_port={s2c_rtp.sport}-{s2c_rtcp.sport}\r\n
+      Duration: 139\r\n
+      Bookmark: 0\r\n
+      \r\n
 - recv:
     flow: c2s
     search:

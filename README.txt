@@ -43,9 +43,12 @@ If the spaces are important in the data, for example in case of formated xml
 use "data: |", otherwise use "data: |-". "|-" will strip extra white spaces
 
 injecting data in L7 payload:
-Two forms are supported:
+Following forms are supported:
 - {<flow_name>.<Flow field>}
 - {<field name from 'payload' dictionary>}
+Addition, subtraction, multiplication and division are supported
+- {c2s.dport + 1}
+
 Example:
 Transport: RTP/AVP/UDP;unicast;client_port={client_rtp}-{client_rtcp};server_port={s2c_rtp.sport}-{s2c_rtcp.sport}
 
@@ -222,6 +225,12 @@ Content Length:
 '\s+\d{3}\r\n'
 
     
+
+
+Debugging
+----------------------------------------------------------------------
+When -l DEBUG is specified all sent and received packets are dumped into
+packet.log file
 
 
 

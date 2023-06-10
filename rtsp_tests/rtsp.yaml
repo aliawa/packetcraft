@@ -33,6 +33,7 @@ scenario:
       SETUP rtsp://audio.example.com/twister/audio.en RTSP/1.0\r\n
       CSeq: 1\r\n
       Transport: RTP/AVP/UDP;unicast;client_port=3056-3057\r\n
+      \r\n
 - recv:
     flow: s2c
     match: SETUP.*RTSP/1.0
@@ -47,6 +48,7 @@ scenario:
       CSeq: 1\r\n
       Session: 12345678\r\n
       Transport: RTP/AVP/UDP;unicast;client_port={client_rtp}-{client_rtcp};server_port=5000-5001\r\n
+      \r\n
 - recv:
     flow: c2s
     match: ^RTSP/1.0.*

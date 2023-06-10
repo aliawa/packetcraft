@@ -226,13 +226,11 @@ def flds_eval(exp):
 
 def flds_get_val(var):
     if var[0] == "'" or var.isdigit():
-        print (f"literal:{var}")
         if var.isdigit():
             return int(var)
         else:
             return var
     elif "." in var:
-        print (f"var:{var}")
         fld_d,_,fld_n = var.partition('.')
         if fld_d in dicts['flows'].keys():
             return str(getattr(dicts['flows'][fld_d], fld_n))
@@ -628,7 +626,7 @@ def setup_logging(log_level):
 
     # packets log, all sniffed packets
     pktlog = logging.getLogger('replay_data_pkt') # Logger
-    loghdlr3 = logging.FileHandler("packet.log")
+    loghdlr3 = logging.FileHandler("packet.log", mode='w')
     pktlog.addHandler(loghdlr3)
     pktlog.setLevel(log_level)
 
