@@ -83,7 +83,10 @@ def log_action(act, fl, pkt):
     s = "{} [{}]".format(act, fl)
     if (Raw in pkt):
         lod = pkt[Raw].load
-        if lod.isalpha():
+        printable_chars = set(bytes(string.printable, 'ascii'))
+        printable = all(char in printable_chars for char in lod)
+
+        if printable:
             actlog.info("{:<6}{:<15}{}".format(prefix, s, lod.decode('utf8').splitlines()[0][:26]))
         else:
             byts = [ hex(x).split('x')[-1] for x in lod]
