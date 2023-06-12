@@ -7,6 +7,7 @@ import textwrap
 import logging
 import ipaddress
 import inspect
+import string
 from scapy.all import *
 import pdb
 
@@ -447,6 +448,10 @@ def create_packet(act):
                 pkt[TCP].flags='PA'
                 fl.seq+=len(act['data'])
 
+        elif type(act['rtp']) == bytes:
+            print ("rtp found")
+            pkt = pkt/act['data']
+            
         else:
             raise Error("Unknown send data type")
 
@@ -553,24 +558,6 @@ def run_scenario(scenario):
 
 
 # ---------------------------------------------------------------
-#           Add support for include in yaml files
-# ---------------------------------------------------------------
-
-class Loader(yaml.SafeLoader):
-    def __init__(self, stream):
-        self._root = os.path.split(stream.name)[0]
-        super(Loader, self).__init__(stream)
-
-    def include(self, node):
-        filename = os.path.join(self._root, self.construct_scalar(node))
-        with open(filename, 'r') as f:
-            return yaml.load(f, Loader)
-
-Loader.add_constructor('!include', Loader.include)
-
-
-
-# ---------------------------------------------------------------
 #                            Receiver
 # ---------------------------------------------------------------
 
@@ -646,15 +633,15 @@ def setup(scenario_f, routes_f, params_f, pcap_f):
     global rcvqueue
 
     with open(scenario_f, 'r') as f:
-        scen_dict = yaml.load(f, Loader)
+        scen_dict = yaml.full_load(f)
 
     with open(routes_f, 'r') as f:
-        routing = yaml.load(f, Loader)
+        routing = yaml.safe_load(f)
 
     dicts = {}
     if params_f:
         with open(params_f, 'r') as f:
-            dicts.update(yaml.safe_load(f))
+            dicts.update(yaml.full_load(f))
 
     rcvqueue       = queue.Queue()  
     saved_pkts     = {}
@@ -699,10 +686,10 @@ if __name__ == '__main__':
     init(getattr(logging, args.log))
 
     with open(args.testfile, 'r') as f:
-        dictionary = yaml.load(f, Loader)
+        dictionary = yaml.full_load(f)
 
     with open(args.routes, 'r') as f:
-        routing = yaml.load(f, Loader)
+        routing = yaml.full_load(f)
 
     dicts = {}
     if args.params:
