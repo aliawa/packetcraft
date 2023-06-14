@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+
 import argparse
 import yaml
 import queue
@@ -32,6 +33,7 @@ class Flow:
         self.seq     = 0
         self.ack     = 0
         self.ooq     = {}   # out of order queue
+        self.l7      = {}   # Layer 7 data
 
         if fl['sport'] == 'random':
             self.sport   = random.randint(3000,65535)
@@ -62,6 +64,20 @@ class NoRoute(Error):
 
 
 
+# --------------------------------------------------------------------------
+#                                 LOADER
+# --------------------------------------------------------------------------
+
+
+def rtp_constructor(loader, node):
+    rtp_dict = loader.construct_mapping(node)
+    pkt=RTP()
+    if 'payload' in rtp_dict:
+        pkt=pkt/rtp_dict['payload']
+    return pkt
+
+yaml.add_constructor(u'!rtp', rtp_constructor)
+
 
 
 # --------------------------------------------------------------------------
@@ -82,7 +98,9 @@ def log_action(act, fl, pkt):
         prefix = "-----"
 
     s = "{} [{}]".format(act, fl)
-    if (Raw in pkt):
+    if (RTP in pkt):
+        actlog.info(f"{prefix:<6}{s:<15} RTP {pkt[UDP].sport}->{pkt[UDP].dport} {scapy.layers.rtp._rtp_payload_types[pkt[RTP].payload_type]} ssrc:{pkt[RTP].sourcesync}")
+    elif (Raw in pkt):
         lod = pkt[Raw].load
         printable_chars = set(bytes(string.printable, 'ascii'))
         printable = all(char in printable_chars for char in lod)
@@ -148,8 +166,8 @@ def update_l3_l4(fl, pkt):
         if 'S' in pkt[TCP].flags or 'F' in pkt[TCP].flags:
             endseq = sseq + 1
             assert not Raw in pkt   # not expecting data in FIN or SYN packet
-        elif Raw in pkt:
-            endseq = sseq + len(pkt[Raw].load) 
+        elif pkt[TCP].payload:
+            endseq = sseq + len(pkt[TCP].payload) 
             genlog.debug(f"payload in packet, seq {sseq}-{endseq-1}")
 
         # update receive next sequence number
@@ -328,6 +346,7 @@ def do_recv(act, c):
     fl = dicts['flows'][act['flow']]
     genlog.debug("\n{} on intf {}".format(inspect.stack()[0][3], fl.intf))
     to = act['timeout'] if 'timeout' in act else RCV_TIMEOUT
+        
 
     while True:
         try:
@@ -337,10 +356,15 @@ def do_recv(act, c):
             raise Error("receive timeout")
 
         if l3_l4_match(pkt, fl, act) == True:
+            if "l7-proto" in act:
+                if act["l7-proto"] == "RTP":
+                    pkt[UDP].decode_payload_as(RTP)
+
             log_action("recv", act['flow'], pkt)
             update_l3_l4(fl,pkt)
         else:
             continue
+
 
         if 'match' in act: 
             if l7_match(pkt, fl, act):
@@ -349,6 +373,7 @@ def do_recv(act, c):
                 continue
 
         update_dicts(pkt)
+
 
         if ("echo" in act):
             echo(pkt, fl, act)
@@ -359,7 +384,8 @@ def do_recv(act, c):
         if "verify" in act:
             l7_verify(act, fl, act)
 
-        unknown_a = [ a for a in act.keys() if a not in ['flow','search','verify','exec','flags','match','echo']]
+
+        unknown_a = [ a for a in act.keys() if a not in ['flow','search','verify','exec','flags','match','echo','l7-proto']]
         for x in unknown_a:
             genlog.warning(f"WARNING: Unknown action:{x}")
 
@@ -423,6 +449,7 @@ def create_packet(act):
             fl.seq=1
             if hasattr(fl, 'mss'):
                 pkt[TCP].options = [('MSS',fl.mss)]
+
     # Raw
     if 'data' in act:
         if type(act['data']) == str:
@@ -448,9 +475,15 @@ def create_packet(act):
                 pkt[TCP].flags='PA'
                 fl.seq+=len(act['data'])
 
-        elif type(act['rtp']) == bytes:
-            print ("rtp found")
+        elif type(act['data']) == RTP:
             pkt = pkt/act['data']
+            if 'ssrc' not in fl.l7:
+                fl.l7['ssrc'] = random.randint(9000,50000)
+            if 'ts' not in fl.l7:
+                fl.l7['ts'] = int(time.time())
+
+            pkt[RTP].sourcesync = fl.l7['ssrc']
+            pkt[RTP].timestamp = fl.l7['ts']
             
         else:
             raise Error("Unknown send data type")
