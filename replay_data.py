@@ -35,14 +35,16 @@ class Flow:
         self.ooq     = {}   # out of order queue
         self.l7      = {}   # Layer 7 data
 
-        if fl['sport'] == 'random':
-            self.sport   = random.randint(3000,65535)
-        else:
-            self.sport   = str(fl['sport'])
+        if 'sport' in fl:
+            if fl['sport'] == 'random':
+                self.sport  = random.randint(3000,65535)
+            else:
+                self.sport   = flds_eval(str(fl['sport']))
+
         if 'dst' in fl:
-            self.dst = fl['dst']
+            self.dst = flds_eval(fl['dst'])
         if 'dport' in fl:
-            self.dport = str(fl['dport'])
+            self.dport = flds_eval(str(fl['dport']))
         if 'tos' in fl:
             self.tos = fl['tos']
         if 'mss' in fl:
@@ -247,19 +249,23 @@ def flds_eval(exp):
 
 
 def flds_get_val(var):
-    if var[0] == "'" or var.isdigit():
-        if var.isdigit():
-            return int(var)
+    try:
+        if var[0] == "'" or var[0].isdigit():
+            if var.isdigit():
+                return int(var)
+            else:
+                return var
+        elif "." in var:
+            fld_d,_,fld_n = var.partition('.')
+            if fld_d in dicts['flows'].keys():
+                return str(getattr(dicts['flows'][fld_d], fld_n))
+            else:
+                return dicts[fld_d][fld_n]
         else:
-            return var
-    elif "." in var:
-        fld_d,_,fld_n = var.partition('.')
-        if fld_d in dicts['flows'].keys():
-            return str(getattr(dicts['flows'][fld_d], fld_n))
-        else:
-            return dicts[fld_d][fld_n]
-    else:
-        return dicts['payload'].get(var, None)
+            return dicts['payload'].get(var, None)
+    except KeyError:
+        print (f"Undefined variable: {var}")
+        raise
 
         
 
@@ -279,7 +285,7 @@ def update_flow(pkt, fl, act):
             flds = {'fld1':rhs}
 
         for i in flds.values():
-            val = flds_get_val(i)
+            val = flds_eval(i)
             if val: break
     
         if not val:
@@ -424,7 +430,7 @@ def create_packet(act):
     if (fl.dst == None):
         genlog.error("[x] Error: No destination ip for {}".format(act['flow']))
         raise Error ("No destination ip for {}".format(act['flow']))
-    if (fl.dport == None):
+    if not hasattr(fl, 'dport') or fl.dport == None :
         genlog.error ("[x] Error: No destination port for {}".format(act['flow']))
         raise Error ("No destination port for {}".format(act['flow']))
 
@@ -678,9 +684,12 @@ def setup(scenario_f, routes_f, params_f, pcap_f):
 
     rcvqueue       = queue.Queue()  
     saved_pkts     = {}
-    dicts['flows'] = { name:Flow(fl) for name, fl in scen_dict['flows'].items() }
-    fname          = pcap_f
 
+    dicts['flows'] = {}
+    for name, fl in scen_dict['flows'].items():
+        dicts['flows'].update({name:Flow(fl)})
+
+    fname          = pcap_f
     intfs = { fl.intf for fl in dicts['flows'].values() }
     hosts = { fl.src for fl in dicts['flows'].values() }
     fltr=' or '.join(map(lambda x: "host "+x, list(hosts)))
@@ -736,15 +745,17 @@ if __name__ == '__main__':
         fname = None
 
 
-    scenario = setup(args.testfile, args.routes, args.params, fname)
-    time.sleep(3)
-
     try:
-        run_scenario(scenario)
-
+        scenario = setup(args.testfile, args.routes, args.params, fname)
     except KeyError as inst:
         genlog.critical ("KeyError: {}".format(inst))
-        raise
+        exit()
+       
+    try:
+        time.sleep(3)
+        run_scenario(scenario)
+    except KeyError as inst:
+        genlog.critical ("KeyError: {}".format(inst))
     except Error as err:
         genlog.critical ("Error: {}".format(err))
     finally:

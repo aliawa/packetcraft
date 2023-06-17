@@ -107,7 +107,7 @@ client                     server
    |                         |
    |    <--- RTP    -----    |
    |    ---- RTP    ---->    |
-   |    ---- RTCP   ---->    |   # client can send rtcp
+   |    ---- RTCP   ---->    |   # client can send rtcp to server.rtp.src_port + 1
 
 
 3.4 Non standard RTCP port in SETUP

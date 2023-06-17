@@ -12,19 +12,19 @@ flows:
   s2c_rtp:
     proto: udp
     src: 51.91.11.76
-    sport: 3880
+    sport: 'random'
   c2s_rtp:
     proto: udp
     src: 192.168.1.1
-    sport: '3840'
+    sport: 'random'
   s2c_rtcp:
     proto: udp
     src: 51.91.11.76
-    sport: 3881
+    sport: s2c_rtp.sport + 1
   c2s_rtcp:
     proto: udp
     src: 192.168.1.1
-    sport: '3841'
+    sport: c2s_rtp.sport + 1
 scenario:
 - send:
     flow: c2s
@@ -47,7 +47,7 @@ scenario:
       SETUP rtsp://18.130.20.194:1199/e04bbfab-STBId=01899752772 RTSP/1.0\r\n
       CSeq: 2\r\n
       User-Agent: eventIS_VOD_V1\r\n
-      Transport: MP2T/AVP/UDP;unicast;client_port=3840-3841\r\n
+      Transport: MP2T/AVP/UDP;unicast;client_port={c2s_rtp.sport}-{c2s_rtcp.sport}\r\n
 - recv:
     flow: s2c
     match: SETUP.*RTSP/1.0
@@ -66,7 +66,7 @@ scenario:
       Session: S_873a79fac3f98568e83eefe7637f1568\r\n
       Location: rtsp://18.130.20.194:5005/\r\n
       ControlSession: C_58b9bd9c8dd429497b3922c23b11b152\r\n
-      Transport: MP2T/AVP/UDP;unicast;client_port={client_rtp}-{client_rtcp};source=51.91.11.76;server_port=3880-3881\r\n
+      Transport: MP2T/AVP/UDP;unicast;client_port={client_rtp}-{client_rtcp};source=51.91.11.76;server_port={s2c_rtp.sport}-{s2c_rtcp.sport}\r\n
       Duration: 139\r\n
       Bookmark: 0\r\n
 - recv:

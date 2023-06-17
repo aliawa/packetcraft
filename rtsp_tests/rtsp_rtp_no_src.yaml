@@ -59,14 +59,23 @@ scenario:
 - recv:
     flow: c2s
     exec:
-    - c2s_rtp.dst=pkt.src
+      - c2s_rtp.dst=pkt.src
 - send:
     flow: s2c_rtp
-    data: !!binary |
-      gIjm/QAAAPDe4O6P1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
-      1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
-      1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
-      1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
-      1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
+    data: !rtp
+        payload: !!binary  1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
 - recv:
     flow: c2s_rtp
+    l7-proto: RTP
+    exec:
+      - c2s_rtp.dport=pkt.sport
+
+- send:
+    flow: c2s_rtp
+    data: !rtp
+        payload: !!binary  1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
+
+- recv:
+    flow: s2c_rtp
+    l7-proto: RTP
+

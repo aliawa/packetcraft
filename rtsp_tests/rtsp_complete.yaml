@@ -3,7 +3,7 @@ flows:
   'c2s':
      proto: 'tcp'
      src: '192.168.1.1'
-     sport: 5050
+     sport: 'random'
      dst: '10.1.1.1'
      dport: '554'
 
@@ -15,22 +15,22 @@ flows:
   's2c_rtp':
      proto: 'udp'
      src: '10.1.1.1'
-     sport: '5000'
+     sport: 'random'
 
   'c2s_rtp':
      proto: 'udp'
      src: '192.168.1.1'
-     sport: '3056'
+     sport: 'random'
 
   's2c_rtcp':
      proto: 'udp'
      src: '10.1.1.1'
-     sport: '5001'
+     sport: s2c_rtp.sport + 1
 
   'c2s_rtcp':
      proto: 'udp'
      src: '192.168.1.1'
-     sport: '3057'
+     sport: c2s_rtp.sport + 1
 
 
 scenario: 
@@ -93,39 +93,37 @@ scenario:
  
 - send:
    flow: 's2c_rtp'
-   data: !!binary |-
-    gIjm/QAAAPDe4O6P1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
-    1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
-    1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
-    1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
+   data: !rtp
+      payload: !!binary 1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
 
 - recv:
    flow: 'c2s_rtp'
+   l7-proto: RTP
    
 - send:
    flow: 'c2s_rtp'
-   data: !!binary |-
-    gIjm/QAAAPDe4O6P1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
-    1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
-    1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
-    1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
+   data: !rtp
+       payload: !!binary  1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
 
 - recv:
    flow: 's2c_rtp'
+   l7-proto: RTP
 
 - send:
    flow: 's2c_rtcp'
-   data: !!binary |
-     gckAB5SJhVomFWpSAAAAAAAAAAAAAAAAAAAAAAgABAiBygADlImFWgEEUFZTUwAA
+   data: !rtp
+      payload: !!binary 1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
 
 - recv:
    flow: 'c2s_rtcp'
+   l7-proto: RTP
    
 - send:
    flow: 'c2s_rtcp'
-   data: !!binary |
-     gckAB5SJhVomFWpSAAAAAAAAAAAAAAAAAAAAAAgABAiBygADlImFWgEEUFZTUwAA
+   data: !rtp
+      payload: !!binary 1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
 
 - recv:
    flow: 's2c_rtcp'
+   l7-proto: RTP
 

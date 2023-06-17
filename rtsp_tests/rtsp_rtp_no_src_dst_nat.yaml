@@ -4,16 +4,16 @@ flows:
     src: 192.168.1.1
     sport: 'random'
     dst: 10.1.1.1
-    dport: 7070
+    dport: 554
   s2c:
     proto: tcp
-    src: 10.1.1.1
-    sport: 7070
-  s2c_rtcp:
+    src: 10.3.3.3
+    sport: 554 
+  s2c_rtp:
     proto: udp
-    src: 10.1.1.1
-    sport: 'random'
-  c2s_rtcp:
+    src: 10.3.3.3
+    sport: 5000
+  c2s_rtp:
     proto: udp
     src: 192.168.1.1
     sport: 'random'
@@ -38,33 +38,44 @@ scenario:
     data: |-
       SETUP rtsp://audio.example.com/twister/audio.en RTSP/1.0\r\n
       CSeq: 1\r\n
-      Transport: RTP/AVP/UDP;unicast;client_port={c2s_rtcp.sport - 4}-{c2s_rtcp.sport}\r\n
+      Transport: RTP/AVP/UDP;unicast;client_port={c2s_rtp.sport}-{c2s_rtp.sport + 1}\r\n
+      \r\n
 - recv:
     flow: s2c
     match: SETUP.*RTSP/1.0
     search:
     - Transport:.*client_port=(?P<client_rtp>\d+)(?:-(?P<client_rtcp>\d+))?
     exec:
-    - s2c_rtcp.dport=client_rtcp
-    - s2c_rtcp.dst=pkt.src
+    - s2c_rtp.dport=client_rtp
+    - s2c_rtp.dst=pkt.src
 - send:
     flow: s2c
     data: |-
       RTSP/1.0 200 OK\r\n
       CSeq: 1\r\n
       Session: 12345678\r\n
-      Transport: RTP/AVP/UDP;unicast;client_port={client_rtp}-{client_rtcp};server_port={s2c_rtcp.sport - 1}-{s2c_rtcp.sport}\r\n
+      Transport: RTP/AVP/UDP;unicast;client_port={client_rtp}-{client_rtcp}\r\n
+      \r\n
 - recv:
     flow: c2s
-    match: ^RTSP/1.0 200 OK.*
-    search:
-    - Transport:.*server_port=(?P<srvr_rtp>\d+)(?:-(?P<srvr_rtcp>\d+))?
     exec:
-    - c2s_rtcp.dport=srvr_rtcp
-    - c2s_rtcp.dst=pkt.src
+      - c2s_rtp.dst=pkt.src
 - send:
-    flow: s2c_rtcp
-    data: !!binary |
-      gckAB5SJhVomFWpSAAAAAAAAAAAAAAAAAAAAAAgABAiBygADlImFWgEEUFZTUwAA
+    flow: s2c_rtp
+    data: !rtp
+        payload: !!binary  1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
 - recv:
-    flow: c2s_rtcp
+    flow: c2s_rtp
+    l7-proto: RTP
+    exec:
+      - c2s_rtp.dport=pkt.sport
+
+- send:
+    flow: c2s_rtp
+    data: !rtp
+        payload: !!binary  1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
+
+- recv:
+    flow: s2c_rtp
+    l7-proto: RTP
+

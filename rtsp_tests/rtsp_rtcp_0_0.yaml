@@ -2,7 +2,7 @@ flows:
   c2s:
     proto: tcp
     src: 192.168.1.1
-    sport: 5050
+    sport: 'random'
     dst: 10.1.1.1
     dport: 7070
   s2c:
@@ -12,20 +12,19 @@ flows:
   s2c_rtp:
     proto: udp
     src: 10.1.1.1
-    sport: 5000
+    sport: 'random'
   c2s_rtp:
     proto: udp
     src: 192.168.1.1
-    sport: '3056'
+    sport: 'random'
   s2c_rtcp:
     proto: udp
     src: 10.1.1.1
-    sport: 5001
+    sport: s2c_rtp.sport + 1
   c2s_rtcp:
     proto: udp
     src: 192.168.1.1
-    sport: '3057'
-    dport: '5001'
+    sport: s2c_rtcp.sport + 1
 scenario:
 - send:
     flow: c2s
@@ -47,7 +46,7 @@ scenario:
     data: |-
       SETUP rtsp://audio.example.com/twister/audio.en RTSP/1.0\r\n
       CSeq: 1\r\n
-      Transport: RTP/AVP/UDP;unicast;client_port=3056\r\n
+      Transport: RTP/AVP/UDP;unicast;client_port={c2s_rtp.sport}\r\n
 - recv:
     flow: s2c
     match: SETUP.*RTSP/1.0
@@ -62,7 +61,7 @@ scenario:
       RTSP/1.0 200 OK\r\n
       CSeq: 1\r\n
       Session: 12345678\r\n
-      Transport: RTP/AVP/UDP;unicast;client_port={client_rtp};server_port=5000\r\n
+      Transport: RTP/AVP/UDP;unicast;client_port={client_rtp};server_port={s2c_rtp.sport}\r\n
 - recv:
     flow: c2s
     match: ^RTSP/1.0 200 OK.*
@@ -72,6 +71,7 @@ scenario:
     - c2s_rtp.dport=srvr_rtp
     - c2s_rtp.dst=pkt.src
     - c2s_rtcp.dst=pkt.src
+    - c2s_rtcp.dport= srvr_rtp + 1
 - send:
     flow: s2c_rtp
     data: !!binary |

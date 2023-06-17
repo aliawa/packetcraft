@@ -6,6 +6,12 @@
   '192.168.1.0/24': 
       next-hop: 00:50:56:93:b7:b1
       dev: ens224
+  '192.168.100.1/32': 
+      next-hop: 00:50:56:93:b7:b1
+      dev: ens224                         # On the same side as 192.168.1.0
+  '10.2.2.0/24':                          # Natted address of 192.168.1.0, send it to where 192.168.1.0 is sent 
+      next-hop: 00:50:56:93:b7:b1
+      dev: ens224
   '10.1.1.0/24':
       next-hop: 00:50:56:93:a3:d4
       dev: ens192
@@ -25,4 +31,4 @@
       ips: [ 192.168.1.1, 192.168.100.1 ]
   'ens224': 
       mac: 00:50:56:93:a3:d4
-      ips: [ 10.1.1.1,51.91.11.76]
+      ips: [ 10.1.1.1,51.91.11.76,10.3.3.3]     # 10.3.3.3 is the dst-natted address of 10.1.1.1
