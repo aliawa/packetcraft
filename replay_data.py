@@ -44,7 +44,10 @@ class Flow:
         if 'dst' in fl:
             self.dst = flds_eval(fl['dst'])
         if 'dport' in fl:
-            self.dport = flds_eval(str(fl['dport']))
+            if fl['dport'] == 'random':
+                self.dport  = random.randint(3000,65535)
+            else:
+                self.dport   = flds_eval(str(fl['dport']))
         if 'tos' in fl:
             self.tos = fl['tos']
         if 'mss' in fl:

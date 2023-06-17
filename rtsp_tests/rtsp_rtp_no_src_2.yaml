@@ -1,0 +1,87 @@
+# A test where the client sends RTP packet to server at some random port
+# before the server sends its rtp.
+# After the first rtp packet from server client sends rtp to server at the 
+# source port of the server's rtp
+flows:
+  c2s:
+    proto: tcp
+    src: 192.168.1.1
+    sport: 'random'
+    dst: 10.1.1.1
+    dport: 554
+  s2c:
+    proto: tcp
+    src: 10.1.1.1
+    sport: 554 
+  s2c_rtp:
+    proto: udp
+    src: 10.1.1.1
+    sport: 'random'
+  c2s_rtp:
+    proto: udp
+    src: 192.168.1.1
+    sport: 'random'
+    dport: 'random'    # because server does not sends its rtp source port
+scenario:
+- send:
+    flow: c2s
+    flags: S
+- recv:
+    flow: s2c
+    flags: S
+    exec:
+    - s2c.dst=pkt.src
+    - s2c.dport=pkt.sport
+- send:
+    flow: s2c
+    flags: SA
+- recv:
+    flow: c2s
+    flags: SA
+- send:
+    flow: c2s
+    data: |-
+      SETUP rtsp://audio.example.com/twister/audio.en RTSP/1.0\r\n
+      CSeq: 1\r\n
+      Transport: RTP/AVP/UDP;unicast;client_port={c2s_rtp.sport}-{c2s_rtp.sport + 1}\r\n
+      \r\n
+- recv:
+    flow: s2c
+    match: SETUP.*RTSP/1.0
+    search:
+    - Transport:.*client_port=(?P<client_rtp>\d+)(?:-(?P<client_rtcp>\d+))?
+    exec:
+    - s2c_rtp.dport=client_rtp
+    - s2c_rtp.dst=pkt.src
+- send:
+    flow: s2c
+    data: |-
+      RTSP/1.0 200 OK\r\n
+      CSeq: 1\r\n
+      Session: 12345678\r\n
+      Transport: RTP/AVP/UDP;unicast;client_port={client_rtp}-{client_rtcp}\r\n
+      \r\n
+           
+- recv:
+    flow: c2s
+    exec:
+        # Negative test: The client creates unknown-udp session 
+    - c2s_rtp.dst=pkt.src
+
+- send:
+    flow: c2s_rtp
+    data: !rtp 
+        payload: 'abc'
+
+- delay:
+    timeout: 3
+
+- send:
+    flow: s2c_rtp
+    data: !rtp 
+        payload: '12345'
+
+- recv:
+    flow: c2s_rtp
+    l7-proto: "RTP"
+
