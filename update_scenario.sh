@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # converts the scenario 'SNAME' from OLD_SCN_DIR to NEW_SCN_DIR/SNAME
-OLD_SCN_DIR=rtsp_tests_old
-NEW_SCN_DIR=rtsp_tests
+OLD_SCN_DIR=sip_tests
+NEW_SCN_DIR=sip_tests_new
 SNAME=$1
 
 if [ "$#" -eq 0 ];then
@@ -16,5 +16,5 @@ fi
 
 
 python3 update_scenario.py -i $OLD_SCN_DIR/$SNAME -o $HOME/tmp/$SNAME
-awk -f post_process.awk $HOME/tmp/$SNAME > $NEW_SCN_DIR/$SNAME
+gawk -f post_process.awk $HOME/tmp/$SNAME > $NEW_SCN_DIR/$SNAME
 

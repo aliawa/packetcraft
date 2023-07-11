@@ -1,5 +1,9 @@
 /^- / {
+    if (inblock == 1){
+        print ""
+    }
     inblock=0
+    cont=0
 }
 
 /data:/ {
@@ -12,15 +16,25 @@
 
 {
     if (inblock == 1) {
-        gsub(/"/,"")
         gsub(/^\s*data:\s+/,"")
+        gsub(/^"/,"")
+        gsub(/"$/,"")
+        gsub(/\\"/,"\"")
         gsub(/^\s*/,"")
-        split($0, a, /\\n/)
-        for (s in a){
-            if (length(a[s])){
-                printf("%*s%s\\r\\n\n",p+2,"",a[s])
-            }
+        n=split($0, a, /\\n/)
+        s=1
+        if (cont == 1) {
+            printf(" %s\\r\\n\n",a[1])
+            cont=0
+            s=2
         }
+        for (;s<n;++s) {
+            printf("%*s%s\\r\\n\n",p+2,"",a[s])
+        }
+        if (length(a[s])) {
+            printf("%*s%s",p+2,"",a[s])
+            cont=1
+        } 
     } else {
         print
     }

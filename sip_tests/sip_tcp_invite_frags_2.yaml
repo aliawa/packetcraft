@@ -1,80 +1,91 @@
-# Request URI address is split
-# Verify that the "Request URI" address is sent out in a single segment"
-
 flows:
- - name: 'c2s'
-   proto: tcp
-   src: 192.168.1.1
-   sport: 5050
-   dst: 10.1.1.1
-   dport: 5060
-
- - name: 's2c'
-   proto: tcp
-   src: 10.1.1.1
-   sport: 5060
-
-scenario: 
- - flow: 'c2s'
-   action: 'send'
-   flags: S
-
- - flow: 's2c'
-   action: 'recv'
-   flags: S
-   exec:
-       - 's2c.dst=IP.src'
-       - 's2c.dport=TCP.sport'
-
- - flow: 's2c'
-   action: 'send'
-   flags: SA
-
-
- - flow: 'c2s'
-   action: send
-   data: |-
+  c2s:
+    proto: tcp
+    src: 192.168.1.1
+    sport: 5050
+    dst: 10.1.1.1
+    dport: 5060
+  s2c:
+    proto: tcp
+    src: 10.1.1.1
+    sport: 5060
+scenario:
+- send:
+    flow: c2s
+    flags: S
+- recv:
+    flow: s2c
+    flags: S
+    exec:
+    - s2c.dst=pkt.src
+    - s2c.dport=pkt.sport
+- send:
+    flow: s2c
+    flags: SA
+- send:
+    flow: c2s
+    data: |-
       INVITE sip:7405557000@10.
-
-
- - flow: 's2c'
-   action: recv
-   match: '^INVITE sip:7405557000@$'
-
-
- - flow: 'c2s'
-   action: send
-   data: |-
-      1.1.1:5060;user=phone SIP/2.0\r\n
-      Via: SIP/2.0/UDP 192.168.1.1:5060;branch=z9hG4bKbe15632f914B3568\r\n
-      Record-Route: <sip:7405557012@192.168.4.1;lr>\r\n
-      From: "7012" <sip:7405557012@10.1.1.1:5060>;tag=BA76D475-4FE052EC\r\n
-      To: <sip:7405557000@10.1.1.1:5060;user=phone>\r\n
-      Call-ID: 5a2fb8b1-3c6d8673-82af160a@192.168.1.100\r\n
-      CSeq: 1 INVITE\r\n
-      Contact: <sip:7405557012@192.168.1.1:7060>\r\n
-      User-agent: PolycomSoundPointIP-SPIP_501-UA/2.0.2.0076\r\n
-      Supported: 100rel\r\n
-      Supported: replaces\r\n
-      allow-events: talk\r\n
-      Max-forwards: 70\r\n
-      Allow: INVITE, ACK, BYE, CANCEL, OPTIONS, INFO, MESSAGE, SUBSCRIBE, NOTIFY, PRACK, UPDATE, REFER\r\n
-      Content-Type: application/sdp\r\n
-      Content-Length:   247\r\n
+- recv:
+    flow: s2c
+    match: ^INVITE sip:7405557000@$
+- send:
+    flow: c2s
+    data: |-
+      1.1.1:5060;user=phone SIP/2.0\\r\\r\n
       \r\n
-      v=0\r\n
-      o=- 978385019 978385019 IN IP4 192.168.1.1\r\n
-      s=Polycom IP Phone\r\n
-      c=IN IP4 192.168.1.1\r\n
-      t=0 0\r\n
-      a=sendrecv\r\n
-      m=audio 7000 RTP/AVP 0 8 18 101\r\n
-      a=rtpmap:0 PCMU/8000\r\n
-      a=rtpmap:8 PCMA/8000\r\n
-      a=rtpm
-      ap:18 G729/8000\r\n
+      Via: SIP/2.0/UDP 192.168.1.1:5060;branch=z9hG4bKbe15632f914B3568\\ r\\r\n
+      \r\n
+      Record-Route: <sip:7405557012@192.168.4.1;lr>\\r\\r\n
+      \r\n
+      From: "7012" <sip:7405557012@10.1.1.1:5060>;tag=BA76D475-4FE052EC\\ r\\r\n
+      \r\n
+      To: <sip:7405557000@10.1.1.1:5060;user=phone>\\r\\r\n
+      \r\n
+      Call-ID: 5a2fb8b1-3c6d8673-82af160a@192.168.1.100\\ r\\r\n
+      \r\n
+      CSeq: 1 INVITE\\r\\r\n
+      \r\n
+      Contact: <sip:7405557012@192.168.1.1:7060>\\r\\ n\r\n
+      User-agent: PolycomSoundPointIP-SPIP_501-UA/2.0.2.0076\\r\\r\n
+      \r\n
+      Supported: 100rel\\r\\r\n
+      \r\n
+      Supported: replaces\\r\\r\n
+      \r\n
+      allow-events: talk\\r\\r\n
+      \r\n
+      Max-forwards: 70\\r\\r\n
+      \r\n
+      Allow: INVITE, ACK, BYE, CANCEL, OPTIONS, INFO, MESSAGE, SUBSCRIBE, NOTIFY, PRACK, UPDATE, REFER\\r\\r\n
+      \r\n
+      Content-Type: application/sdp\\r\\r\n
+      \r\n
+      Content-Length:\ \   247\\r\\r\n
+      \r\n
+      \\r\\r\n
+      \r\n
+      v=0\\r\\r\n
+      \r\n
+      o=- 978385019 978385019 IN IP4 192.168.1.1\\ r\\r\n
+      \r\n
+      s=Polycom IP Phone\\r\\r\n
+      \r\n
+      c=IN IP4 192.168.1.1\\r\\r\n
+      \r\n
+      t=0 0\\r\\r\n
+      \r\n
+      a=sendrecv\\ r\\r\n
+      \r\n
+      m=audio 7000 RTP/AVP 0 8 18 101\\r\\r\n
+      \r\n
+      a=rtpmap:0 PCMU/8000\\r\\r\n
+      \r\n
+      a=rtpmap:8 PCMA/8000\\r\\r\n
+      \r\n
+      a=rtpm\r\n
+      ap:18 G729/8000\\r\\r\n
 
- - flow: 's2c'
-   action: recv
-   match: '10.1.1.1:5060;user=phone'
-
+- recv:
+    flow: s2c
+    match: 10.1.1.1:5060;user=phone

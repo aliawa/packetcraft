@@ -1,92 +1,81 @@
-# mode=record in c2s
-# mode=record in s2c
-# destination is the server address
-# first rtp from client to server
-# second rtp from server to client
-
 flows:
- - name: 'c2s'
-   proto: udp
-   intf: eth1
-   src: 192.168.1.1
-   src-natted: 10.2.2.2
-   sport: 5050
-   dst: 10.1.1.1
-   dport: 5060
-
- - name: 's2c'
-   proto: udp
-   intf: eth2
-   src: 10.1.1.1
-   sport: 5060
-   dst: 10.2.2.2
-   dport: 15060
-
-packets: 
- - flow: 'c2s'
-   delay: 0 
-   type: text
-   data: |-
-      INVITE sip:7405557000@10.1.1.1:5060;user=phone SIP/2.0
-      Via: SIP/2.0/UDP 192.168.1.1:5060;branch=z9hG4bKbe15632f914B3568
-      Record-Route: <sip:7405557012@192.168.4.1;lr>
-      From: "7012" <sip:7405557012@10.1.1.1:5060>;tag=BA76D475-4FE052EC
-      To: <sip:7405557000@10.1.1.1:5060;user=phone>
-      Call-ID: 5a2fb8b1-3c6d8673-82af160a@192.168.1.100
-      CSeq: 1 INVITE
-      Contact: <sip:7405557012@192.168.1.1:7060>
-      User-agent: PolycomSoundPointIP-SPIP_501-UA/2.0.2.0076
-      Supported: 100rel
-      Supported: replaces
-      allow-events: talk
-      Max-forwards: 70
-      Allow: INVITE, ACK, BYE, CANCEL, OPTIONS, INFO, MESSAGE, SUBSCRIBE, NOTIFY, PRACK, UPDATE, REFER
-      Content-Type: application/sdp
-      Content-Length:   247
-
-      v=0
-      o=- 978385019 978385019 IN IP4 192.168.1.1
-      s=Polycom IP Phone
-      c=IN IP4 192.168.1.1
-      t=0 0
-      a=sendrecv
-      m=audio 3056 RTP/AVP 0 8 18 101
-      a=rtpmap:0 PCMU/8000
-      a=rtpmap:8 PCMA/8000
-      a=rtpmap:18 G729/8000
+  c2s:
+    proto: udp
+    intf: eth1
+    src: 192.168.1.1
+    src-natted: 10.2.2.2
+    sport: 5050
+    dst: 10.1.1.1
+    dport: 5060
+  s2c:
+    proto: udp
+    intf: eth2
+    src: 10.1.1.1
+    sport: 5060
+    dst: 10.2.2.2
+    dport: 15060
+scenario:
+- send:
+    flow: c2s
+    delay: 0
+    data: |-
+      INVITE sip:7405557000@10.1.1.1:5060;user=phone SIP/2.0\r\n
+      Via: SIP/2.0/UDP 192.168.1.1:5060;branch=z9hG4bKbe15632f914B3568\r\n
+      Record-Route: <sip:7405557012@192.168.4.1;lr>\r\n
+      From: "7012" <sip:7405557012@10.1.1.1:5060>;tag=BA76D475-4FE052EC\r\n
+      To: <sip:7405557000@10.1.1.1:5060;user=phone>\r\n
+      Call-ID: 5a2fb8b1-3c6d8673-82af160a@192.168.1.100\r\n
+      CSeq: 1 INVITE\r\n
+      Contact: <sip:7405557012@192.168.1.1:7060>\r\n
+      User-agent: PolycomSoundPointIP-SPIP_501-UA/2.0.2.0076\r\n
+      Supported: 100rel\r\n
+      Supported: replaces\r\n
+      allow-events: talk\r\n
+      Max-forwards: 70\r\n
+      Allow: INVITE, ACK, BYE, CANCEL, OPTIONS, INFO, MESSAGE, SUBSCRIBE, NOTIFY, PRACK, UPDATE, REFER\r\n
+      Content-Type: application/sdp\r\n
+      Content-Length:   247\r\n
+      \r\n
+      v=0\r\n
+      o=- 978385019 978385019 IN IP4 192.168.1.1\r\n
+      s=Polycom IP Phone\r\n
+      c=IN IP4 192.168.1.1\r\n
+      t=0 0\r\n
+      a=sendrecv\r\n
+      m=audio 3056 RTP/AVP 0 8 18 101\r\n
+      a=rtpmap:0 PCMU/8000\r\n
+      a=rtpmap:8 PCMA/8000\r\n
+      a=rtpmap:18 G729/8000\r\n
       a=rtpmap:101 telephone-event/8000
-
-
- - flow: 's2c'
-   delay: 0 
-   type: text
-   data: |-
-        SIP/2.0 200 OK
-        Via: SIP/2.0/UDP 10.2.2.2:15060;branch=z9hG4bKbe15632f914B3568
-        Record-Route: <sip:7405557012@192.168.4.1;lr>
-        From: "7012" <sip:7405557012@10.1.1.1:5060>;tag=BA76D475-4FE052EC
-        To: <sip:7405557000@10.1.1.1:5060;user=phone>
-        Call-ID: 5a2fb8b1-3c6d8673-82af160a@10.2.2.200
-        CSeq: 1 INVITE
-        Contact: <sip:7405557012@10.1.1.1:8060>
-        Supported: 100rel
-        Supported: replaces
-        allow-events: talk
-        Max-forwards: 70
-        Allow: INVITE, ACK, BYE, CANCEL, OPTIONS, INFO, MESSAGE, SUBSCRIBE,
-        NOTIFY, PRACK, UPDATE, REFER
-        Content-Type: application/sdp
-        Content-Length:   247
-
-        v=0
-        o=- 978385019 978385019 IN IP4 10.1.1.1
-        s=Polycom IP Phone
-        c=IN IP4 10.1.1.1
-        t=0 0
-        a=sendrecv
-        m=audio 8000 RTP/AVP 0 8 18 101
-        a=rtpmap:0 PCMU/8000
-        a=rtpmap:8 PCMA/8000
-        a=rtpmap:18 G729/8000
-        a=rtpmap:101 telephone-event/8000
-
+- send:
+    flow: s2c
+    delay: 0
+    data: |-
+      SIP/2.0 200 OK\r\n
+      Via: SIP/2.0/UDP 10.2.2.2:15060;branch=z9hG4bKbe15632f914B3568\r\n
+      Record-Route: <sip:7405557012@192.168.4.1;lr>\r\n
+      From: "7012" <sip:7405557012@10.1.1.1:5060>;tag=BA76D475-4FE052EC\r\n
+      To: <sip:7405557000@10.1.1.1:5060;user=phone>\r\n
+      Call-ID: 5a2fb8b1-3c6d8673-82af160a@10.2.2.200\r\n
+      CSeq: 1 INVITE\r\n
+      Contact: <sip:7405557012@10.1.1.1:8060>\r\n
+      Supported: 100rel\r\n
+      Supported: replaces\r\n
+      allow-events: talk\r\n
+      Max-forwards: 70\r\n
+      Allow: INVITE, ACK, BYE, CANCEL, OPTIONS, INFO, MESSAGE, SUBSCRIBE,\r\n
+      NOTIFY, PRACK, UPDATE, REFER\r\n
+      Content-Type: application/sdp\r\n
+      Content-Length:   247\r\n
+      \r\n
+      v=0\r\n
+      o=- 978385019 978385019 IN IP4 10.1.1.1\r\n
+      s=Polycom IP Phone\r\n
+      c=IN IP4 10.1.1.1\r\n
+      t=0 0\r\n
+      a=sendrecv\r\n
+      m=audio 8000 RTP/AVP 0 8 18 101\r\n
+      a=rtpmap:0 PCMU/8000\r\n
+      a=rtpmap:8 PCMA/8000\r\n
+      a=rtpmap:18 G729/8000\r\n
+      a=rtpmap:101 telephone-event/8000
