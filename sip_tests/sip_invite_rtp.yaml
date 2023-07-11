@@ -66,7 +66,6 @@ scenario:
     - s2c_rtp.dport=rtp_dport
 - delay:
     timeout: 200
-- delay: {}
 - send:
     flow: s2c_rtp
     data: !!binary |
@@ -141,7 +140,6 @@ scenario:
       1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
 - delay:
     timeout: 100
-- delay: {}
 - send:
     flow: s2c_rtp
     data: !!binary |
@@ -152,7 +150,6 @@ scenario:
       1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
 - delay:
     timeout: 100
-- delay: {}
 - send:
     flow: s2c_rtp
     data: !!binary |
@@ -163,7 +160,6 @@ scenario:
       1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
 - delay:
     timeout: 100
-- delay: {}
 - send:
     flow: s2c_rtp
     data: !!binary |

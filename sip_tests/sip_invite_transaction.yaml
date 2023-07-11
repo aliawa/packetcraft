@@ -17,7 +17,6 @@ flows:
 scenario:
 - send:
     flow: c2s
-    delay: 0
     data: |-
       INVITE sip:7405557000@10.1.1.1:5060;user=phone SIP/2.0\r\n
       Via: SIP/2.0/UDP 192.168.1.1:5060;branch=z9hG4bKbe15632f914B3568\r\n
@@ -49,7 +48,6 @@ scenario:
       a=rtpmap:101 telephone-event/8000
 - send:
     flow: s2c
-    delay: 0
     data: |-
       SIP/2.0 200 OK\r\n
       Via: SIP/2.0/UDP 10.2.2.2:15060;branch=z9hG4bKbe15632f914B3568\r\n
