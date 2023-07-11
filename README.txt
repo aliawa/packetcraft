@@ -36,6 +36,7 @@ Data can be of three types
 - text
 - text with fields
 - binary.
+- rtp 
 
 Fields can be inserted that were extracted from the received packets.
 
@@ -55,7 +56,7 @@ Transport: RTP/AVP/UDP;unicast;client_port={client_rtp}-{client_rtcp};server_por
 
 Flow
 ----------------------------------------------------------------------
-The flow is like a socket it the both souce and destination are given
+The flow is like a socket if the both souce and destination are given
 then it is a client socket. If only the src is given then it is a listen 
 socket.
 
@@ -70,8 +71,10 @@ flows:
 Receive Actions
 ----------------------------------------------------------------------
 - search and exec are lists
--  match is not a list
+- match is not a list
+- Add a receive action even if no data needs to be extracted to update the TCP ACK counter
 
+When receive fails, exception is thrown to indicate that the test has failed
 
 
 Dictionaries avaialable for commands
@@ -125,7 +128,7 @@ if search fails no error reported, and we don't ignore the packet
 
 
 - exec:
-extracted fields are assigned to flows dictionary
+extracted fields are assigned to flows dictionary. Exec only updates the flow
 s2c_rtp.dport=client_rtp
 c2s_rtp.dst={source:IP.src}
 
@@ -150,7 +153,7 @@ pkt.seq == 2315                              # compare tcp seq as integer
 - send:
 name:                                       # retrieve saved packet with this name and send it
 save: name                                  # save the packet for future use with name
-
+if send fails exception is thrown to indicate the test has failed
 
 - loop
 loop acts like a do-while loop. The body is executed at least
@@ -225,6 +228,27 @@ Content Length:
 '\s+\d{3}\r\n'
 
     
+Sending RTP
+----------------------------------------------------------------------
+- send:
+    flow: s2c_rtp
+    data: !rtp
+        ssrc: 4567
+        marker: 1
+        payload: '12345'
+
+
+Parsing L7 protocol
+----------------------------------------------------------------------
+- recv:
+    flow: c2s_rtp
+    l7-proto: "RTP"
+
+
+Scenario commands
+----------------------------------------------------------------------
+- delay:
+    timeout: 5
 
 
 Debugging
