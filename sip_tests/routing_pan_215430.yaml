@@ -1,0 +1,26 @@
+# routing table. 
+# next-hop: the destination mac for sending to this net mask, i.e., the mac of the first hop on the route to this network
+# dev: the outgoing device for sending to this net mask, i.e., local interface physically connected to the first hop
+# Note: Because of vwire the next-hop mac is the same as actual mac for the ip but it could be different in L3 case
+'routing':
+  '10.200.19.65': 
+      next-hop: b4:0c:25:e0:80:49
+      dev: ens224
+  '172.30.0.0/16':                       # natted client address
+      next-hop: b4:0c:25:e0:80:49
+      dev: ens224
+  '10.14.201.20':
+      next-hop: b4:0c:25:e0:80:48
+      dev: ens192
+
+
+# interface table
+# mac: the mac address of this interface
+# ip: the list of ips assigned to this interface
+'interfaces':
+  'ens192':
+      mac: 00:50:56:a1:cb:14
+      ips: [ 10.200.19.65 ]
+  'ens224': 
+      mac: 00:50:56:a1:4f:be
+      ips: [ 10.14.201.20 ]
