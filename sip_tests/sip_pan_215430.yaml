@@ -102,8 +102,8 @@ scenario:
     - c=IN IP4 (?P<rtp_dst>.*)\r\n
     - m=audio (?P<rtp_dport>\d+)
     exec:
-    - s2c_rtp.dst=rtp_dst
-    - s2c_rtp.dport=rtp_dport
+    - c2s_rtp.dst=rtp_dst
+    - c2s_rtp.dport=rtp_dport
 
 - send:
     flow: c2s
@@ -134,6 +134,13 @@ scenario:
 - recv:
     flow: s2c
     match: 'SIP/2.0 200 OK'
+    search:
+    - c=IN IP4 (?P<rtp_dst>.*)\r\n
+    - m=audio (?P<rtp_dport>\d+)
+    exec:
+    - s2c_rtp.dst=rtp_dst
+    - s2c_rtp.dport=rtp_dport
+
 
 - send:
     flow: s2c_rtp

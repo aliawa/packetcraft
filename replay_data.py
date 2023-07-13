@@ -138,6 +138,10 @@ def l3_l4_match(pkt, fl, act):
     else:
         genlog.debug("intf match expecting {} = pkt {}".format(fl.intf, pkt.sniffed_on))
 
+    if (not pkt.haslayer(IP)):
+        genlog.debug("non IP packet: ignoring")
+        return False
+
     if (fl.src and fl.src != pkt[IP].dst):
         genlog.debug("dst no match {} != pkt {}".format(fl.src, pkt[IP].dst))
         return False
