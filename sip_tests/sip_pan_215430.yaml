@@ -30,7 +30,6 @@ scenario:
         CSeq: 2 REGISTER\r\n
         Content-Length: 0\r\n
         Via: SIP/2.0/UDP {c2s.src}:{c2s.sport};branch=z9hG4bK746E5932-C8E3-4DCB-9F68-3A38E09BDBD2-2\r\n
-        User-Agent: Genesys-SIPendpointSDK/9.0.022.06 (Windows 10.0.19044)\r\n
         Max-Forwards: 70\r\n
         Contact: <sip:9200005@{c2s.src}:{c2s.sport};>\r\n
         Expires: 300\r\n
@@ -69,20 +68,17 @@ scenario:
     data: |-
          INVITE sip:7405557000@{s2c.dst}:{s2c.dport};user=phone SIP/2.0\r\n
          Via: SIP/2.0/UDP {s2c.src}:{s2c.sport};branch=z9hG4bKbe15632f914B3568\r\n
-         Record-Route: <sip:7405557012@192.168.4.1;lr>\r\n
          From: "7012" <sip:7405557012@{s2c.src}:{s2c.sport}>;tag=BA76D475-4FE052EC\r\n
          To: <sip:7405557000@{s2c.src}:{s2c.sport};user=phone>\r\n
-         Call-ID: 5a2fb8b1-3c6d8673-82af160a@{c2s.src}00\r\n
+         Call-ID: 5a2fb8b1-3c6d8673-82af160a@{s2c.src}00\r\n
          CSeq: 1 INVITE\r\n
-         Contact: <sip:7405557012@{c2s.src}:7060>\r\n
-         User-agent: PolycomSoundPointIP-SPIP_501-UA/2.0.2.0076\r\n
+         Contact: <sip:7405557012@{s2c.src}:{s2c.sport}>\r\n
          Max-forwards: 70\r\n
-         Allow: INVITE, ACK, BYE, CANCEL, OPTIONS, INFO, MESSAGE, SUBSCRIBE, NOTIFY, PRACK, UPDATE, REFER\r\n
          Content-Type: application/sdp\r\n
          Content-Length:   247\r\n
          \r\n
          v=0\r\n
-         o=- 978385019 978385019 IN IP4 {c2s_rtp.src}\r\n
+         o=- 978385019 978385019 IN IP4 {s2c_rtp.src}\r\n
          s=Polycom IP Phone\r\n
          c=IN IP4 {s2c_rtp.src}\r\n
          t=0 0\r\n
@@ -115,7 +111,6 @@ scenario:
         Call-ID: 6978DD1F-3937-40BF-89F8-A423F8DBDE5F-384@10.14.201.40\r\n
         CSeq: 1 INVITE\r\n
         Contact: <sip:9200014@{c2s.src}:{c2s.sport}>\r\n
-        User-Agent: Genesys-SIPendpointSDK/9.0.022.06 (Windows 10.0.19044)\r\n
         Content-Type: application/sdp\r\n
         Content-Length: 217\r\n
         \r\n
