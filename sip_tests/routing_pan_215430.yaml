@@ -6,6 +6,9 @@
   '10.200.19.65': 
       next-hop: b4:0c:25:e0:80:49
       dev: ens224
+  '10.200.19.77':                        # c2s_2
+      next-hop: b4:0c:25:e0:80:49
+      dev: ens224
   '172.30.0.0/16':                       # natted client address
       next-hop: b4:0c:25:e0:80:49
       dev: ens224
@@ -20,7 +23,7 @@
 'interfaces':
   'ens192':
       mac: 00:50:56:a1:cb:14
-      ips: [ 10.200.19.65 ]
+      ips: [ 10.200.19.65,10.200.19.77 ]
   'ens224': 
       mac: 00:50:56:a1:4f:be
       ips: [ 10.14.201.20 ]
