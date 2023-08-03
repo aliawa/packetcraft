@@ -100,7 +100,7 @@ Example usage of dictionaries:
     statement                       Meaning
     ----------------------------    --------------------------------------
     c2s.port = '132'                flows['c2s'].port = 132
-    c2s.dst = IP.src                flows['c2s'].dst = fields['IP.src']
+    c2s.dst = pkt.src               flows['c2s'].dst = fields['pkt.src']
     c2s.dst={destination:IP.src}    flows['c2s'].dst = fields['destination'] if 'destination' in fields else fields['IP.src']
 
 
