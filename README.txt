@@ -256,5 +256,34 @@ Debugging
 When -l DEBUG is specified all sent and received packets are dumped into
 packet.log file
 
+REPLAY-DATA
+replay data tool can be used to replay a scenario described in a yaml file.
+
+replay_data.py -t test.yaml -r routing_conf.yaml -l INFO
+
+Routing
+-------
+replay data uses its own routing rules, and interface confuguration that are 
+independent of the underlying os routing. Therefore no routing or ip address
+changes are required in the replay machine.
+
+Scenario
+--------
+A scenario consists of two parts.
+    1. Flows
+    2. packet exchange and verification rules
+
+Flows:
+Flows are like UDP/TCP connections used in the scenario. A flow is completely
+specified by the usual 5-tuple. A server flow does not need to be completely
+specified, the destination address/port can be populated when the first
+client packet is received.
+
+Packet exchange and verification rules:
+The yaml file describes the content of the packets to be sent, and verification
+rules when a packet is received. These rules can contain, regular expressions, 
+exact text matches, fields extracted from payload or fields read from an 
+external parameters files.
+
 
 
