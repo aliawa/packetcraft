@@ -25,10 +25,10 @@ RCV_TIMEOUT=10 # timeout in seconds
 
 class Flow:
     def __init__(self, fl):
-        self.proto   = fl['proto']
-        self.src     = fl['src']
-        self.intf    = ip2dev(fl['src'])
-        self.src_mac = ip2mac(fl['src'])
+        self.proto   = fl['proto'] if 'proto' in fl else 'udp'
+        self.src     = flds_eval(fl['src'])
+        self.intf    = ip2dev(self.src)
+        self.src_mac = ip2mac(self.src)
         self.ipid    = random.randint(1,100)
         self.seq     = 0
         self.ack     = 0
@@ -39,7 +39,9 @@ class Flow:
             if fl['sport'] == 'random':
                 self.sport  = random.randint(3000,65535)
             else:
-                self.sport   = flds_eval(str(fl['sport']))
+                self.sport  = flds_eval(str(fl['sport']))
+        else:
+            self.sport  = random.randint(3000,65535)
 
         if 'dst' in fl:
             self.dst = flds_eval(fl['dst'])
