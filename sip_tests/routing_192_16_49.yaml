@@ -3,12 +3,21 @@
 # dev: the outgoing device for sending to this net mask, i.e., local interface physically connected to the first hop
 # Note: Because of vwire the next-hop mac is the same as actual mac for the ip but it could be different in L3 case
 'routing':
-  '192.168.1.1': 
+  '192.168.0.0/16':
       next-hop: 00:50:56:9c:8f:33
       dev: ens224
-  '10.1.1.1':
+  '10.1.1.0/24':
       next-hop: 00:50:56:9c:19:13
       dev: ens192
+  '100.10.10.0/24':
+      next-hop: 00:50:56:9c:19:13
+      dev: ens192
+  '10.2.2.0/24': 
+      next-hop: 00:50:56:9c:8f:33
+      dev: ens224
+  '10.3.3.0/24': 
+      next-hop: 00:50:56:9c:8f:33
+      dev: ens224
 
 
 # interface table
@@ -17,7 +26,7 @@
 'interfaces':
   'ens192':
       mac: 00:50:56:9c:8f:33
-      ips: [ 192.168.1.1 ]
+      ips: [ 192.168.0.0/16 ]
   'ens224': 
       mac: 00:50:56:9c:19:13
-      ips: [ 10.1.1.1 ]
+      ips: [ 11.2.2.0/24, 10.1.1.0/24 ]

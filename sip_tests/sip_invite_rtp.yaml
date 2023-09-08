@@ -1,26 +1,22 @@
 flows:
   c2s:
     proto: udp
-    intf: eth1
     src: 192.168.1.1
     sport: 5050
     dst: 10.1.1.1
     dport: 5060
   s2c:
     proto: udp
-    intf: eth2
     src: 10.1.1.1
     sport: 5060
   c2s_rtp:
     proto: udp
-    intf: eth1
     src: 192.168.1.1
     sport: 6000
     dst: 10.1.1.1
     dport: 7000
   s2c_rtp:
     proto: udp
-    intf: eth2
     src: 10.1.1.1
     sport: 7000
 scenario:
@@ -37,7 +33,6 @@ scenario:
       Contact: <sip:7405557012@192.168.1.1:7060>\r\n
       User-agent: PolycomSoundPointIP-SPIP_501-UA/2.0.2.0076\r\n
       Supported: 100rel\r\n
-      Supported: replaces\r\n
       allow-events: talk\r\n
       Max-forwards: 70\r\n
       Allow: INVITE, ACK, BYE, CANCEL, OPTIONS, INFO, MESSAGE, SUBSCRIBE, NOTIFY, PRACK, UPDATE, REFER\r\n

@@ -1,0 +1,89 @@
+# To work with destination nat policy 10.1.1.1 --> 10.3.3.3
+#
+flows:
+  c2s:
+    proto: tcp
+    src: 192.168.1.1
+    sport: 'random'
+    dst: 10.1.1.1
+    dport: 554 
+  s2c:
+    proto: tcp
+    src: 10.3.3.3
+    sport: 554
+scenario:
+- send:
+    flow: c2s
+    flags: S
+- recv:
+    flow: s2c
+    flags: S
+    exec:
+    - s2c.dst=pkt.src
+    - s2c.dport=pkt.sport
+- send:
+    flow: s2c
+    flags: SA
+- delay:
+    timeout: 5
+- recv:
+    flow: c2s
+    flags: SA
+- send:
+    flow: c2s
+    data: |-
+      DESCRIBE rtsp://10.1.1.1/live/00000001-0000-0000-0000-00408cbc68f5/00000001-0000-0001-0000-00408cbc68f5/4a0425e9-5f15-4675-83eb-2777ce199cb3/2?sourceType=streamSource&consumerSubnet=8f9a3c7d-7d29-4a0b-beec-92961df7963c RTSP/1.0\r\n
+      Accept: application/sdp\r\n
+      Transport: RTP/AVP/UDP;multicast;client_port=6041-6042\r\n
+      X-PlaybackSessionIdentifier: playback:{dcecb627-62e8-4d63-bf66-2403eb4302b0}\r\n
+      X-ViewLevel: 1\r\n
+      X-UserId: 25f130f4-af84-4c3c-937f-32e2e95245fe\r\n
+      CSeq: 1\r\n
+      X-DebugContext: LiveAccessor_4a0425e9-5f15-4675-83eb-2777ce199cb3_VideoPlayer #3\r\n
+      X-RtspClientVersion: 5.9\r\n
+      \r\n
+- recv:
+    flow: s2c
+    match: DESCRIBE.*RTSP/1.0
+    search:
+    - Transport:.*client_port=(?P<client_rtp>\d+)(?:-(?P<client_rtcp>\d+))?
+- delay:
+    timeout: 500
+- send:
+    flow: s2c
+    data: |-
+      RTSP/1.0 200 OK\r\n
+      X-DebugContext: LiveAccessor_4a0425e9-5f15-4675-83eb-2777ce199cb3_VideoPlayer #3\r\n
+      Content-Type: application/sdp\r\n
+      Content-Length: 741\r\n
+      CSeq: 1\r\n
+      Session: 42939820\r\n
+      X-RtspClientVersion: 5.9\r\n
+      \r\n
+      v=0\r\n
+      o=- 0 0 IN IP4 10.0.14.12\r\n
+      s=ArchiverStreamProvider\r\n
+      \r\n
+      c=   \r\n
+      m=video 0 RTP/AVP 96\r\n
+      c=IN IP4 224.16.17.10\64\r\n
+      b=AS:50000\r\n
+      a=framerate:15.0\r\n
+      a=transform:1.000000,0.000000,0.000000;0.000000,1.000000,0.000000;0.000000,0.000000,1.000000\r\n
+      a=X-multicast:224.16.17.10:47806\r\n
+      a=rtpmap:96 H264/90000\r\n
+      a=fmtp:96 packetization-mode=1; profile-level-id=420029; sprop-parameter-sets=Z0IAKeKQFAe2AtwEBAaQeJEV,aM48gA==\r\n
+      a=X-multicastIPv6:[ff33::4]:47806\r\n
+      a=X-EncryptionType:0\r\n
+      a=X-compression:31 AxisH264\r\n
+      a=X-FrameRate:15\r\n
+      a=Transport:6\r\n
+      a=X-UniqueStream:False\r\n
+      a=X-Blocksize:2048\r\n
+      a=X-EncryptedStream:False\r\n
+      a=X-MulticastAddress:224.16.17.10:47806\r\n
+      a=X-MulticastAddressIPv6:[ff33::4]:47806\r\n
+      a=X-StreamOwners:1ee1541d081e44978f8809fc593eb1e1|1|v5.9\r\n
+- recv:
+    flow: c2s
+    match: ^RTSP/1.0.*

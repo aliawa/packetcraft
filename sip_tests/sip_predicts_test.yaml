@@ -1,0 +1,113 @@
+# c2s         --> INVITE-1 --> s2c
+# c2s_via     <-- 200 --       s2c     hits via predict
+
+# c2s         --> ACK -->      s2c_contact  hits s2c contact predict created by 200 ok
+# c2s_contact <-- INVITE-2 --  s2c_contact  hits predict created by INVITE-1
+#
+flows:
+  s2c:
+    proto: udp
+    src: 10.1.1.1
+    sport: 5060
+  c2s:
+    proto: udp
+    src: 192.168.1.1
+    sport: 5050
+    dst: s2c.src
+    dport: s2c.sport
+  c2s_via:
+    proto: udp
+    src: 192.168.1.1
+    sport: 5070
+  s2c_contact:
+    proto: udp
+    src: 10.1.1.1
+    sport: 5080
+  c2s_contact:
+    proto: udp
+    src: 192.168.1.1
+    sport: 5090
+  s2c_via:
+    proto: udp
+    src: 10.1.1.1
+    sport: 5010
+scenario:
+- send:
+    flow: c2s
+    data: |-
+      INVITE sip:7405557000@{s2c.src}:{s2c.sport};user=phone SIP/2.0\r\n
+      Via: SIP/2.0/UDP {c2s_via.src}:{c2s_via.sport};branch=z9hG4bKbe15632f914B3568\r\n
+      From: "7012" <sip:7405557012@{s2c.src}:{s2c.sport}>;tag=BA76D475-4FE052EC\r\n
+      To: <sip:7405557000@{s2c.src}:{s2c.sport};user=phone>\r\n
+      Call-ID: 5a2fb8b1-3c6d8673-82af160a@{c2s.src}00\r\n
+      CSeq: 1 INVITE\r\n
+      Contact: <sip:7405557012@{c2s_contact.src}:{c2s_contact.sport}>\r\n
+      Max-forwards: 70\r\n
+      Content-Length: 0\r\n
+      \r\n
+
+- recv:
+    flow: s2c
+    match: INVITE.*SIP/2.0
+    search:
+      - 'Via: SIP/2.0/... (?P<client_ip>[\d.]+):(?P<client_port>\d+);'
+      - 'Contact:\s*<sip:[^@]+@(?P<contact_ip>[\d.]+):(?P<contact_port>\d+)'
+    exec:
+    - s2c.dst=client_ip
+    - s2c.dport=client_port
+    - s2c_contact.dst=contact_ip
+    - s2c_contact.dport=contact_port
+
+- send:
+    flow: s2c
+    data: |-
+      SIP/2.0 200 OK\r\n
+      Via: SIP/2.0/UDP {s2c.dst}:{s2c.dport};branch=z9hG4bKbe15632f914B3568\r\n
+      From: "7012" <sip:7405557012@{s2c.src}:{s2c.sport}>;tag=BA76D475-4FE052EC\r\n
+      To: <sip:7405557000@{s2c.src}:{s2c.sport};user=phone>\r\n
+      Call-ID: 5a2fb8b1-3c6d8673-82af160a@10.2.2.200\r\n
+      CSeq: 1 INVITE\r\n
+      Contact: <sip:7405557012@{s2c_contact.src}:{s2c_contact.sport}>\r\n
+      Max-forwards: 70\r\n
+      Content-Length: 0\r\n
+      \r\n
+- recv:
+    flow: c2s_via
+    match: SIP/2.0 200 OK
+    search:
+    - 'Contact:\s*<sip:[^@]+@(?P<contact_ip>[\d.]+):(?P<contact_port>\d+)'
+    exec:
+    - c2s_contact.dport=contact_port
+    - c2s_contact.dst=contact_ip
+- send:
+    flow: c2s_contact
+    data: |-
+      ACK sip:7405557000@10.1.1.1:5060;user=phone SIP/2.0\r\n
+      Via: SIP/2.0/UDP {c2s_contact.src}:{c2s_contact.sport};branch=z9hG4bKbe15632f914B3568\r\n
+      From: "7012" <sip:7405557012@{s2c.src}:{s2c.sport}>;tag=BA76D475-4FE052EC\r\n
+      To: <sip:7405557000@{s2c.src}:{s2c.sport};tag=ABC\r\n
+      Call-ID: 5a2fb8b1-3c6d8673-82af160b@{c2s.src}00\r\n
+      CSeq: 1 ACK\r\n
+      Max-forwards: 70\r\n
+      Content-Length: 0\r\n
+- recv:
+    flow: s2c_contact
+    match: 'ACK sip:'
+
+- send:
+    flow: s2c_contact
+    data: |-
+      INVITE sip:7405557000@{s2c_contact.dst}:{s2c_contact.dport};user=phone SIP/2.0\r\n
+      Via: SIP/2.0/UDP {s2c_via.src}:{s2c_via.sport};branch=z9hG4bKbe15632f914B3569\r\n
+      From: "7012" <sip:7405557012@{s2c.src}:{s2c.sport}>;tag=BA76D475-4FE052EC\r\n
+      To: <sip:7405557000@{s2c.src}:{s2c.sport}>;tag=ABC\r\n
+      Call-ID: 5a2fb8b1-3c6d8673-82af160a@{c2s.src}00\r\n
+      CSeq: 1 INVITE\r\n
+      Contact: <sip:7405557012@{s2c_contact.src}:{s2c_contact.sport}>\r\n
+      Max-forwards: 70\r\n
+      Content-Length: 0\r\n
+      \r\n
+
+- recv:
+    flow: c2s_contact
+    match: 'INVITE sip'

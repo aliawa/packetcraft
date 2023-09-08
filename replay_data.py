@@ -19,6 +19,25 @@ import pdb
 RCV_TIMEOUT=10 # timeout in seconds
 
 
+def evalport(fl, port):
+    if port in fl:
+        portstr = str(fl[port])
+        if re.match(r"\d+$", portstr):
+            return portstr
+
+        mch = re.search(r"random\s*\(\s*(?P<strt>\d+)+\s*-\s*(?P<endr>\d+)\s*\)", portstr)
+        if mch:
+            return random.randint(int(mch.group('strt')), int(mch.group('endr')))
+        elif portstr == 'random' :
+            return random.randint(3000,65535)
+        else:
+            return flds_eval(portstr)
+    else:
+        return random.randint(3000,65535)
+
+
+
+
 # -----------------------------------------------------------
 #                            Defines
 # -----------------------------------------------------------
@@ -26,7 +45,7 @@ RCV_TIMEOUT=10 # timeout in seconds
 class Flow:
     def __init__(self, fl):
         self.proto   = fl['proto'] if 'proto' in fl else 'udp'
-        self.src     = flds_eval(fl['src'])
+        self.src     = flds_eval(str(fl['src']))
         self.intf    = ip2dev(self.src)
         self.src_mac = ip2mac(self.src)
         self.ipid    = random.randint(1,100)
@@ -35,21 +54,12 @@ class Flow:
         self.ooq     = {}   # out of order queue
         self.l7      = {}   # Layer 7 data
 
-        if 'sport' in fl:
-            if fl['sport'] == 'random':
-                self.sport  = random.randint(3000,65535)
-            else:
-                self.sport  = flds_eval(str(fl['sport']))
-        else:
-            self.sport  = random.randint(3000,65535)
+        self.sport   = evalport(fl,'sport')
 
         if 'dst' in fl:
-            self.dst = flds_eval(fl['dst'])
+            self.dst = flds_eval(str(fl['dst']))
         if 'dport' in fl:
-            if fl['dport'] == 'random':
-                self.dport  = random.randint(3000,65535)
-            else:
-                self.dport   = flds_eval(str(fl['dport']))
+            self.dport = evalport(fl, 'dport')
         if 'tos' in fl:
             self.tos = fl['tos']
         if 'mss' in fl:
@@ -240,21 +250,27 @@ def echo(pkt, fl, act):
 
 
 def flds_eval(exp):
-    lst = exp.split()
-    if len(lst) > 2:
-        lhs,op,rhs = lst
-        ops = set("+-/*")
-        if op in ops:
-            if op == '+':
-                return str(int(flds_get_val(lhs)) + int(flds_get_val(rhs)))
-            elif op == '-':
-                return str(int(flds_get_val(lhs)) - int(flds_get_val(rhs)))
-            elif op == '*':
-                return str(int(flds_get_val(lhs)) / int(flds_get_val(rhs)))
-            elif op == '/':
-                return str(int(flds_get_val(lhs)) * int(flds_get_val(rhs)))
+    if re.match(r"\d+", exp):
+        return exp
 
-    return flds_get_val(exp)
+    mch = re.match(r"^(?P<lhs>[^\d\W]\w*(\.[^\d\W]\w*)?)?\s*(?P<op>[+*\/-]?)\s*(?P<rhs>([^\d\W]\w*\.*([^\d\W]\w*)|\d+))?", exp)
+    if (mch):
+        if mch.group('op'):
+            lhs = mch.group('lhs')
+            rhs = mch.group('rhs')
+            if mch.group('op') == '+':
+                return str(int(flds_get_val(lhs)) + int(flds_get_val(rhs)))
+            elif mch.group('op') == '-':
+                return str(int(flds_get_val(lhs)) - int(flds_get_val(rhs)))
+            elif mch.group('op') == '*':
+                return str(int(flds_get_val(lhs)) / int(flds_get_val(rhs)))
+            elif mch.group('op') == '/':
+                return str(int(flds_get_val(lhs)) * int(flds_get_val(rhs)))
+        else:
+            return flds_get_val(exp)
+    else:
+        raise Error(f"Bad expression {exp}")
+
 
 
 def flds_get_val(var):
@@ -410,16 +426,20 @@ def do_recv(act, c):
 
 
 def ip2mac(ip):
+    ipadr = ipaddress.ip_address(ip)
     for dev,val in routing['interfaces'].items():
-        if ip in val['ips']:
-            return val['mac']
+        for net in val['ips']:
+            if ipadr in ipaddress.ip_network(net):
+                return val['mac']
     raise Error (f"[x] No mac for {ip}")
 
 
 def ip2dev(ip):
+    ipadr = ipaddress.ip_address(ip)
     for dev,val in routing['interfaces'].items():
-        if ip in val['ips']:
-            return dev
+        for net in val['ips']:
+            if ipadr in ipaddress.ip_network(net):
+                return dev
     raise Error (f"[x] No device for {ip}")
 
 

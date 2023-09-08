@@ -1,0 +1,319 @@
+flows:
+  's2c_1':
+    src: 10.1.1.1
+    sport: 5060
+  's2c_2':              # same as s2c_1, used to remember c2s_2 address
+    src: 10.1.1.1
+    sport: 5060
+  's2c1_contact':
+    src: 's2c_1.src'
+    sport: 5060
+  's2c2_contact':
+    src: s2c_2.src
+    sport: 5060
+
+  'c2s_1':
+    src: 192.168.1.1
+    sport: 'random'
+    dst: s2c_1.src
+    dport: s2c_1.sport
+  'c2s_2':
+    src: 192.168.1.2
+    sport: 'random'
+    dst: s2c_1.src
+    dport: s2c_1.sport
+
+  'c2s1_rtp':
+    src: 192.168.1.1
+    sport: 'random(4000-5000)'
+  'c2s2_rtp':
+    src: 192.168.1.2
+    sport: 'random(4000-5000)'
+
+  's2c1_rtp':
+    src: 10.1.1.1
+    sport: 'random(8000-9000)'
+  's2c2_rtp':
+    src: 10.1.1.1
+    sport: 'random(8000-9000)'
+
+
+scenario:
+    # ----------------------------------
+    #  ACT: Client-1 Registers
+    # ----------------------------------
+- send:
+    flow: 'c2s_1'
+    data: |-
+        REGISTER sip:{c2s_1.dst}:{c2s_1.dport};transport=UDP SIP/2.0\r\n
+        From: "Genesys0" <sip:9200005@{c2s_1.dst}:{c2s_1.dport};tag=FCFA7CA6-3C61-4335-8863-EBF8C801776D-1\r\n
+        To: <sip:9200005@{c2s_1.dst}:{c2s_1.dport}>\r\n
+        Call-ID: 904BEF46-9331-482F-B0BD-8F4517CFE70F-1@xcgi\r\n
+        CSeq: 2 REGISTER\r\n
+        Content-Length: 0\r\n
+        Via: SIP/2.0/UDP {c2s_1.src}:{c2s_1.sport};branch=z9hG4bK746E5932-C8E3-4DCB-9F68-3A38E09BDBD2-2\r\n
+        Max-Forwards: 70\r\n
+        Contact: <sip:9200005@{c2s_1.src}:{c2s_1.sport};>\r\n
+        Expires: 300\r\n
+
+- recv:
+    flow: 's2c_1'
+    match: 'REGISTER sip:.*'
+    search:
+        - 'Via: SIP/2.0/UDP (?P<client_ip>[\d.]+):(?P<client_port>\d+);'
+        - 'Contact: <sip:[0-9]+@(?P<contact_ip>[\d.]+):(?P<contact_port>\d+);'
+        - 'From: (?P<from>.*)\r\n'
+        - 'To: (?P<to>.*)\r\n'
+    exec:
+      - s2c_1.dst=client_ip
+      - s2c_1.dport=client_port
+      - s2c1_contact.dst=contact_ip
+      - s2c1_contact.dport=contact_port
+
+- send: 
+    flow: 's2c_1'
+    data: |-
+        SIP/2.0 200 OK\r\n
+        From: {from}\r\n
+        To: {to}\r \n
+        Call-ID: 904BEF46-9331-482F-B0BD-8F4517CFE70F-1@xcgi\r\n
+        CSeq: 2 REGISTER\r\n
+        Via: SIP/2.0/UDP {client_ip}:{client_port};branch=z9hG4bK746E5932-C8E3-4DCB-9F68-3A38E09BDBD2-2\r\n
+        Contact: <sip:9200005@{contact_ip}:{contact_port}>;expires=100\r\n
+        Expires: 100\r\n
+        Content-Length: 0\r\n
+
+- recv:
+    flow: c2s_1
+    match: 'SIP/2.0 200 OK'
+
+
+    # ----------------------------------
+    #  ACT: Client-2 Registers
+    # ----------------------------------
+- send:
+    flow: 'c2s_2'
+    data: |-
+        REGISTER sip:{c2s_2.dst}:{c2s_2.dport};transport=UDP SIP/2.0\r\n
+        From: "Genesys0" <sip:9200005@{c2s_2.dst}:{c2s_2.dport};tag=FCFA7CA6-3C61-4335-8863-EBF8C801776D-1\r\n
+        To: <sip:9200005@{c2s_2.dst}:{c2s_2.dport}>\r\n
+        Call-ID: 904BEF46-9331-482F-B0BD-8F4517CFE70F-1@xcgi\r\n
+        CSeq: 2 REGISTER\r\n
+        Content-Length: 0\r\n
+        Via: SIP/2.0/UDP {c2s_2.src}:{c2s_2.sport};branch=z9hG4bK746E5932-C8E3-4DCB-9F68-3A38E09BDBD2-2\r\n
+        Max-Forwards: 70\r\n
+        Contact: <sip:9200005@{c2s_2.src}:{c2s_2.sport};>\r\n
+        Expires: 300\r\n
+
+- recv:
+    flow: 's2c_2'
+    match: 'REGISTER sip:.*'
+    search:
+        - 'Via: (?P<via>.*)\r\n'
+        - 'From: (?P<from>.*)\r\n'
+        - 'To: (?P<to>.*)\r\n'
+        - 'Via: SIP/2.0/UDP (?P<client_ip>[\d.]+):(?P<client_port>\d+);'
+        - 'Contact: <sip:[0-9]+@(?P<contact_ip>[\d.]+):(?P<contact_port>\d+);'
+    exec:
+      - s2c_2.dst=client_ip
+      - s2c_2.dport=client_port
+      - s2c2_contact.dst=contact_ip
+      - s2c2_contact.dport=contact_port
+
+- send: 
+    flow: 's2c_2'
+    data: |-
+        SIP/2.0 200 OK\r\n
+        From: {from}\r\n
+        To: {to}\r\n
+        Call-ID: 904BEF46-9331-482F-B0BD-8F4517CFE70F-1@xcgi\r\n
+        CSeq: 2 REGISTER\r\n
+        Via: {via}\r\n
+        Contact: <sip:9200005@{s2c_2.src}:{s2c_2.sport}>;expires=100\r\n
+        Expires: 100\r\n
+        Content-Length: 0\r\n
+
+- recv:
+    flow: c2s_2
+    match: 'SIP/2.0 200 OK'
+
+
+    # ----------------------------------
+    # ACT: INV-1 from server
+    # ----------------------------------
+- send:
+    flow: s2c1_contact
+    data: |-
+         INVITE sip:2020@{s2c1_contact.dst}:{s2c1_contact.dport};user=phone SIP/2.0\r\n
+         Via: SIP/2.0/UDP {s2c1_contact.src}:{s2c1_contact.sport};branch=z9hG4bKbe15632f914B3568\r\n
+         From: "7012" <sip:1010@{s2c1_contact.src}:{s2c1_contact.sport}>;tag=BA76D475-4FE052EC\r\n
+         To: <sip:2020@{s2c1_contact.src}:{s2c1_contact.sport}\r\n
+         Call-ID: 5a2fb8b1-3c6d8673-82af160a@{s2c1_contact.src}00\r\n
+         CSeq: 1 INVITE\r\n
+         Contact: <sip:1010@{s2c1_contact.src}:{s2c1_contact.sport}>\r\n
+         Max-forwards: 70\r\n
+         Content-Type: application/sdp\r\n
+         Content-Length: 0\r\n
+
+- recv:
+    flow: c2s_1
+    match: INVITE.*
+    search:
+        - 'Via: SIP/2.0/UDP (?P<via_ip>[\d.]+):(?P<via_port>\d+);'
+        - 'Via: (?P<via>.*)\r\n'
+        - 'From: (?P<from>.*)\r\n'
+        - 'To: (?P<to>.*)\r\n'
+    exec:
+        - c2s_1.dst=via_ip
+        - c2s_1.dport=via_port
+
+- send:
+    flow: c2s_1
+    data: |-
+        SIP/2.0 200 OK\r\n
+        Via: {via}\r\n
+        From: {from}\r\n
+        To: {to}\r\n
+        Call-ID: 6978DD1F-3937-40BF-89F8-A423F8DBDE5F-384@10.14.201.40\r\n
+        CSeq: 1 INVITE\r\n
+        Contact: <sip:9200014@{c2s_1.src}:{c2s_1.sport}>\r\n
+        Content-Type: application/sdp\r\n
+        Content-Length: 119\r\n
+        \r\n
+        v=0\r\n
+        o=Genesys 2 1 IN IP4 {c2s1_rtp.src}\r\n
+        s=GSept-9.0.022.06\r\n
+        c=IN IP4 {c2s1_rtp.src}\r\n
+        t=0 0\r\n
+        m=audio {c2s1_rtp.sport} RTP/AVP 8 0 101\r\n
+
+
+- recv:
+    flow: s2c1_contact
+    match: 'SIP/2.0 200 OK'
+    search:
+    - c=IN IP4 (?P<rtp_dst>.*)\r\n
+    - m=audio (?P<rtp_dport>\d+)
+    exec:
+    - s2c1_rtp.dst=rtp_dst
+    - s2c1_rtp.dport=rtp_dport
+
+
+
+
+    # ----------------------------------
+    # ACT: INV-2 from server
+    # ----------------------------------
+
+- send:
+    flow: s2c_2
+    data: |-
+         INVITE sip:2020@{s2c_2.dst}:{s2c_2.dport};user=phone SIP/2.0\r\n
+         Via: SIP/2.0/UDP {s2c_2.src}:{s2c_2.sport};branch=z9hG4bKbe15632f914B3568\r\n
+         From: "7012" <sip:1010@{s2c_2.src}:{s2c_2.sport}>;tag=BA76D475-4FE052EC\r\n
+         To: <sip:2020@{s2c_2.src}:{s2c_2.sport};tag=22ACF8FE-ED47-4D78-9C8B-AFB7A04401E5-2\r\n
+         Call-ID: 5a2fb8b1-3c6d8673-82af160a@{c2s_1.src}00\r\n
+         CSeq: 2 INVITE\r\n
+         Contact: <sip:1010@{s2c_2.src}:{s2c_2.sport}>\r\n
+         Max-forwards: 70\r\n
+         Content-Type: application/sdp\r\n
+         Content-Length:   119\r\n
+         \r\n
+         v=0\r\n
+         o=- 978385019 978385019 IN IP4 {s2c1_rtp.src}\r\n
+         s=Polycom IP Phone\r\n
+         c=IN IP4 {s2c1_rtp.dst}\r\n
+         t=0 0\r\n
+         a=sendrecv\r\n
+         m=audio {s2c1_rtp.dport} RTP/AVP 0 8 18 101\r\n
+
+- recv:
+    flow: c2s_2
+    match: INVITE.*
+    search:
+    - 'Via: SIP/2.0/UDP (?P<client_ip>[\d.]+):(?P<client_port>\d+);'
+    - 'From: (?P<from>.*)\r\n'
+    - 'To: (?P<to>.*)\r\n'
+    - c=IN IP4 (?P<rtp_dst>.*)\r\n
+    - m=audio (?P<rtp_dport>\d+)
+    exec:
+    - c2s2_rtp.dst=rtp_dst
+    - c2s2_rtp.dport=rtp_dport
+    - c2s_2.dst=client_ip
+    - c2s_2.dport=client_port
+
+- send:
+    flow: c2s_2
+    data: |-
+        SIP/2.0 200 OK\r\n
+        Via: SIP/2.0/UDP {c2s_2.src}:{c2s_2.sport};branch=z9hG4bKbe15632f914B3568\r\n
+        From: {from}\r\n
+        To: {to}\r\n
+        Call-ID: 6978DD1F-3937-40BF-89F8-A423F8DBDE5F-384@10.14.201.40\r\n
+        CSeq: 2 INVITE\r\n
+        Contact: <sip:9200014@{c2s_2.src}:{c2s_2.sport}>\r\n
+        Content-Type: application/sdp\r\n
+        Content-Length: 122\r\n
+        \r\n
+        v=0\r\n
+        o=Genesys 2 1 IN IP4 {c2s2_rtp.src}\r\n
+        s=GSept-9.0.022.06\r\n
+        c=IN IP4 {c2s2_rtp.src}\r\n
+        t=0 0\r\n
+        m=audio {c2s2_rtp.sport} RTP/AVP 8 0 101\r\n
+
+
+- recv:
+    flow: s2c_2
+    match: 'SIP/2.0 200 OK'
+    search:
+    - c=IN IP4 (?P<rtp_dst>.*)\r\n
+    - m=audio (?P<rtp_dport>\d+)
+    exec:
+    - s2c2_rtp.dst=rtp_dst
+    - s2c2_rtp.dport=rtp_dport
+
+- send:
+    flow: s2c_1
+    data: |-
+        ACK sip:2020@{s2c_1.dst}:{s2c_1.dport};user=phone SIP/2.0\r\n
+        Via: SIP/2.0/UDP {s2c_1.src}:{s2c_1.sport};branch=z9hG4bKbe15632f914B3568\r\n
+        From: "7012" <sip:1010@{s2c_2.src}:{s2c_2.sport}>;tag=BA76D475-4FE052EC\r\n
+        To: <sip:2020@{s2c_2.src}:{s2c_2.sport};tag=22ACF8FE-ED47-4D78-9C8B-AFB7A04401E5-2\r\n
+        Call-ID: 5a2fb8b1-3c6d8673-82af160a@{c2s_1.src}00\r\n
+        CSeq: 2 INVITE\r\n
+        Contact: <sip:1010@{s2c_1.src}:{s2c_1.sport}>\r\n
+        Max-forwards: 70\r\n
+        Content-Type: application/sdp\r\n
+        Content-Length:   119\r\n
+        \r\n
+        v=0\r\n
+        o=- 978385019 978385019 IN IP4 {s2c2_rtp.dst}\r\n
+        s=Polycom IP Phone\r\n
+        c=IN IP4 {s2c2_rtp.dst}\r\n
+        t=0 0\r\n
+        a=sendrecv\r\n
+        m=audio {s2c2_rtp.dport} RTP/AVP 0 8 18 101\r\n
+
+
+- send:
+    flow: c2s2_rtp
+    data: !rtp
+        ssrc: 4567
+        marker: 1
+        payload: '12345'
+
+- recv:
+    flow: c2s1_rtp
+    l7-proto: "RTP"
+
+- send:
+    flow: c2s1_rtp
+    data: !rtp
+        ssrc: 4567
+        marker: 1
+        payload: '12345'
+
+- recv:
+    flow: c2s2_rtp
+    l7-proto: "RTP"
