@@ -13,33 +13,33 @@ flows:
 
   's2c':
     proto: udp
-    src: 10.14.201.20
+    src: 10.1.1.2
     sport: 5060
   's2c_rtp':
     proto: udp
-    src: 10.14.201.20
+    src: s2c.src
     sport: 27254
 
   'c2s':
     proto: udp
-    src: 10.200.19.65
-    sport: 5060
-    dst: 10.14.201.20
-    dport: 5060
-  'c2s_rtp':
-    proto: udp
-    src: 10.200.19.65
-    sport: 16384
-  'c2s_2':
-    proto: udp
-    src: 10.200.19.77
+    src: 192.168.2.1
     sport: 5060
     dst: s2c.src
     dport: s2c.sport
+  'c2s_2':
+    proto: udp
+    src: 192.168.2.2
+    sport: 5060
+    dst: s2c.src
+    dport: s2c.sport
+  'c2s_rtp':
+    proto: udp
+    src: c2s.src
+    sport: 16384
 
 scenario:
     # ----------------------------------
-    #  ACT: REG-1 from client
+    #  REG-1 from client
     # ----------------------------------
 - send:
     flow: 'c2s'
@@ -54,6 +54,7 @@ scenario:
         Max-Forwards: 70\r\n
         Contact: <sip:9200005@{c2s.src}:{c2s.sport};>\r\n
         Expires: 300\r\n
+        \r\n
 
 - recv:
     flow: 's2c'
@@ -79,13 +80,14 @@ scenario:
         Expires: 100\r\n
         Server: STL_SA_SIP_CC01-p (ts_sa_stl_sip_cc01_pr_p v8.1.104.34)\r\n
         Content-Length: 0\r\n
+        \r\n
 
 - recv:
     flow: c2s
     match: 'SIP/2.0 200 OK'
 
     # ----------------------------------
-    # ACT: INV-1 from server
+    #  INV-1 from server
     # ----------------------------------
 - send:
     flow: s2c
@@ -99,7 +101,7 @@ scenario:
          Contact: <sip:7405557012@{s2c.src}:{s2c.sport}>\r\n
          Max-forwards: 70\r\n
          Content-Type: application/sdp\r\n
-         Content-Length:   247\r\n
+         Content-Length:   240\r\n
          \r\n
          v=0\r\n
          o=- 978385019 978385019 IN IP4 {s2c_rtp.src}\r\n
@@ -111,7 +113,7 @@ scenario:
          a=rtpmap:0 PCMU/8000\r\n
          a=rtpmap:8 PCMA/8000\r\n
          a=rtpmap:18 G729/8000\r\n
-         a=rtpmap:101 telephone-event/8000
+         a=rtpmap:101 telephone-event/8000\r\n
 - recv:
     flow: c2s
     match: INVITE.*
@@ -136,7 +138,7 @@ scenario:
         CSeq: 1 INVITE\r\n
         Contact: <sip:9200014@{c2s.src}:{c2s.sport}>\r\n
         Content-Type: application/sdp\r\n
-        Content-Length: 217\r\n
+        Content-Length: 215\r\n
         \r\n
         v=0\r\n
         o=Genesys 2 1 IN IP4 {c2s_rtp.src}\r\n
@@ -162,7 +164,7 @@ scenario:
 
 
     # ----------------------------------
-    # ACT: RTP from server
+    #  RTP from server
     # ----------------------------------
 - send:
     flow: s2c_rtp
@@ -194,16 +196,16 @@ scenario:
     cond: None
 
 - delay:
-    timeout: 10000
+    timeout: 1000
 
     # ----------------------------------
-    # ACT: INV-2 from server
+    # INV-2 from client
     # ----------------------------------
 
 - send:
     flow: c2s
     data: |-
-         INVITE sip:7405557000@{s2c.dst}:{s2c.dport};user=phone SIP/2.0\r\n
+         INVITE sip:7405557000@{s2c.src}:{s2c.sport};user=phone SIP/2.0\r\n
          Via: SIP/2.0/UDP {c2s.src}:{c2s.sport};branch=z9hG4bKbe15632f914B3568\r\n
          From: "7012" <sip:7405557012@{s2c.src}:{s2c.sport}>;tag=BA76D475-4FE052EC\r\n
          To: <sip:7405557000@{s2c.src}:{s2c.sport};tag=22ACF8FE-ED47-4D78-9C8B-AFB7A04401E5-2\r\n
@@ -212,7 +214,7 @@ scenario:
          Contact: <sip:7405557012@{c2s.src}:{c2s.sport}>\r\n
          Max-forwards: 70\r\n
          Content-Type: application/sdp\r\n
-         Content-Length:   247\r\n
+         Content-Length:   246\r\n
          \r\n
          v=0\r\n
          o=- 978385019 978385019 IN IP4 {c2s_rtp.src}\r\n
@@ -224,7 +226,7 @@ scenario:
          a=rtpmap:0 PCMU/8000\r\n
          a=rtpmap:8 PCMA/8000\r\n
          a=rtpmap:18 G729/8000\r\n
-         a=rtpmap:101 telephone-event/8000
+         a=rtpmap:101 telephone-event/8000\r\n
 - recv:
     flow: s2c
     match: INVITE.*

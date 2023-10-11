@@ -18,6 +18,8 @@
   '10.3.3.0/24': 
       next-hop: 00:50:56:9c:8f:33
       dev: ens224
+      #      next-hop: 00:50:56:9c:19:13
+      #dev: ens192
 
 
 # interface table

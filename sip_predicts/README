@@ -1,0 +1,30 @@
+sip_invite_created.yaml
+    via predict
+    contact predict
+    rtp predict
+    rtcp predict
+
+    check:
+        creation
+            case 12, new nat created
+        DIP natref, add/clear
+        appinfo2ip add/clear
+
+
+
+sip_invite_converted.yaml
+    via predict
+    contact predict
+    rtp predict
+    rtcp predict
+
+    check:
+        conversion
+        rtp predicts:
+            case 1, src_mapped
+        sip
+            case 4, because the nat already done in predict
+
+
+
+

@@ -9,6 +9,15 @@ flows:
     proto: udp
     src: 10.1.1.1
     sport: 5060
+  s2c_via:
+    proto: udp
+    src: 10.1.1.1
+    sport: 5010
+  s2c_contact:
+    proto: udp
+    src: 10.1.1.1
+    sport: 5080
+
   c2s:
     proto: udp
     src: 192.168.1.1
@@ -19,18 +28,11 @@ flows:
     proto: udp
     src: 192.168.1.1
     sport: 5070
-  s2c_contact:
-    proto: udp
-    src: 10.1.1.1
-    sport: 5080
   c2s_contact:
     proto: udp
     src: 192.168.1.1
     sport: 5090
-  s2c_via:
-    proto: udp
-    src: 10.1.1.1
-    sport: 5010
+
 scenario:
 - send:
     flow: c2s
@@ -50,11 +52,11 @@ scenario:
     flow: s2c
     match: INVITE.*SIP/2.0
     search:
-      - 'Via: SIP/2.0/... (?P<client_ip>[\d.]+):(?P<client_port>\d+);'
+      - 'Via: SIP/2.0/... (?P<via_ip>[\d.]+):(?P<via_port>\d+);'
       - 'Contact:\s*<sip:[^@]+@(?P<contact_ip>[\d.]+):(?P<contact_port>\d+)'
     exec:
-    - s2c.dst=client_ip
-    - s2c.dport=client_port
+    - s2c.dst=via_ip
+    - s2c.dport=via_port
     - s2c_contact.dst=contact_ip
     - s2c_contact.dport=contact_port
 

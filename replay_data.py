@@ -262,9 +262,9 @@ def flds_eval(exp):
                 return str(int(flds_get_val(lhs)) + int(flds_get_val(rhs)))
             elif mch.group('op') == '-':
                 return str(int(flds_get_val(lhs)) - int(flds_get_val(rhs)))
-            elif mch.group('op') == '*':
-                return str(int(flds_get_val(lhs)) / int(flds_get_val(rhs)))
             elif mch.group('op') == '/':
+                return str(int(flds_get_val(lhs)) / int(flds_get_val(rhs)))
+            elif mch.group('op') == '*':
                 return str(int(flds_get_val(lhs)) * int(flds_get_val(rhs)))
         else:
             return flds_get_val(exp)

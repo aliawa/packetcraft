@@ -1,0 +1,173 @@
+# INVITE creates 4 predict 
+# via <==
+# contact <==
+# rtp <==
+# rtcp <==
+# Test conversion of all four
+flows:
+  s2c:
+    proto: udp
+    src: 10.1.1.2
+    sport: 5060
+  s2c_via:
+    proto: udp
+    src: s2c.src
+    sport: s2c.sport
+  s2c_contact:
+    proto: udp
+    src: s2c.src
+    sport: s2c.sport
+  s2c_rtp:
+    src: s2c.src
+    sport: 'random(28000-29000)'
+  s2c_rtcp:
+    src: s2c.src
+    sport: s2c_rtp.sport + 1
+
+  c2s:
+    proto: udp
+    src: 192.168.2.1
+    sport: 'random(5000-6000)'
+    dst: s2c.src
+    dport: s2c.sport
+  c2s_via:
+    proto: udp
+    src: c2s.src
+    sport: c2s.sport
+  c2s_contact:
+    src: c2s.src
+    sport: c2s.sport
+  c2s_rtp:
+    src: c2s.src
+    sport: 'random(27000-28000)'
+  c2s_rtcp:
+    src: c2s.src
+    sport: c2s_rtp.sport + 1
+
+scenario:
+- send:
+    flow: c2s
+    data: |-
+      INVITE sip:7405557000@{s2c.src}:{s2c.sport};user=phone SIP/2.0\r\n
+      Via: SIP/2.0/UDP {c2s_via.src}:{c2s_via.sport};branch=z9hG4bKbe15632f914B3568\r\n
+      From: "7012" <sip:7405557012@{s2c.src}:{s2c.sport}>;tag=BA76D475-4FE052EC\r\n
+      To: <sip:7405557000@{s2c.src}:{s2c.sport};user=phone>\r\n
+      Call-ID: 5a2fb8b1-3c6d8673-82af160a@{c2s.src}00\r\n
+      CSeq: 1 INVITE\r\n
+      Contact: <sip:7405557012@{c2s_contact.src}:{c2s_contact.sport}>\r\n
+      Max-forwards: 70\r\n
+      Content-Type: application/sdp\r\n
+      Content-Length:   247\r\n
+      \r\n
+      v=0\r\n
+      o=- 978385019 978385019 IN IP4 {c2s_rtp.src}\r\n
+      s=Polycom IP Phone\r\n
+      c=IN IP4 {c2s_rtp.src}\r\n
+      t=0 0\r\n
+      a=sendrecv\r\n
+      m=audio {c2s_rtp.sport} RTP/AVP 0 8 18 101\r\n
+      a=rtpmap:0 PCMU/8000\r\n
+      a=rtpmap:8 PCMA/8000\r\n
+      a=rtpmap:18 G729/8000\r\n
+      a=rtpmap:101 telephone-event/8000\r\n
+      \r\n
+
+- recv:
+    flow: s2c
+    match: INVITE.*SIP/2.0
+    search:
+    - 'Via: (?P<via>.*)\r\n'
+    - 'Via: SIP/2.0/UDP (?P<via_ip>[\d.]+):(?P<via_port>\d+);'
+    - 'From: (?P<from>.*)\r\n'
+    - 'To: (?P<to>.*)\r\n'
+    - 'Contact:\s*<sip:[^@]+@(?P<contact_ip>[\d.]+):(?P<contact_port>\d+)'
+    - c=IN IP4 (?P<rtp_dst>.*)\r\n
+    - m=audio (?P<rtp_dport>\d+)
+    exec:
+    - s2c.dst=via_ip
+    - s2c.dport=via_port
+    - s2c_contact.dst=contact_ip
+    - s2c_contact.dport=contact_port
+    - s2c_rtp.dst=rtp_dst
+    - s2c_rtp.dport=rtp_dport
+    - s2c_rtcp.dst=rtp_dst
+    - s2c_rtcp.dport=rtp_dport+1
+
+      # directed to via predict
+- send:
+    flow: s2c
+    data: |-
+        SIP/2.0 200 OK\r\n
+        Via: {via}\r\n
+        From: {from}\r\n
+        To: {to}\r\n
+        Call-ID: 6978DD1F-3937-40BF-89F8-A423F8DBDE5F-384@10.14.201.40\r\n
+        CSeq: 1 INVITE\r\n
+        Contact: <sip:9200014@{s2c_contact.src}:{s2c_contact.sport}>\r\n
+        Content-Type: application/sdp\r\n
+        Content-Length: 217\r\n
+        \r\n
+        v=0\r\n
+        o=Genesys 2 1 IN IP4 {s2c_rtp.src}\r\n
+        s=GSept-9.0.022.06\r\n
+        c=IN IP4 {s2c_rtp.src}\r\n
+        t=0 0\r\n
+        m=audio {s2c_rtp.sport} RTP/AVP 8 0 101\r\n
+        a=rtpmap:8 pcma/8000\r\n
+        a=rtpmap:0 pcmu/8000\r\n
+        a=rtpmap:101 telephone-event/8000\r\n
+        a=fmtp:101 0-15\r\n
+
+- recv:
+    flow: c2s_via
+    match: 'SIP/2.0 200 OK'
+    search:
+    - c=IN IP4 (?P<rtp_dst>.*)\r\n
+    - m=audio (?P<rtp_dport>\d+)
+    - 'Contact:\s*<sip:[^@]+@(?P<contact_ip>[\d.]+):(?P<contact_port>\d+)'
+    exec:
+    - c2s_rtp.dst=rtp_dst
+    - c2s_rtp.dport=rtp_dport
+    - c2s_rtcp.dst=rtp_dst
+    - c2s_rtcp.dport=rtp_dport + 1
+    - c2s_contact.dport=contact_port
+    - c2s_contact.dst=contact_ip
+
+
+      # directed to invite contact predict
+- send:
+    flow: s2c_contact
+    data: |-
+      PRACK sip:7405557000@{s2c_contact.dst}:{s2c_contact.dport};user=phone SIP/2.0\r\n
+      Via: SIP/2.0/UDP {s2c_contact.src}:{s2c_contact.sport};branch=z9hG4bKbe15632f914B3568\r\n
+      From: "7012" <sip:7405557012@{s2c_contact.src}:{s2c_contact.sport}>;tag=BA76D475-4FE052EC\r\n
+      To: <sip:7405557000@{s2c_contact.src}:{s2c_contact.sport};tag=ABC\r\n
+      Call-ID: 5a2fb8b1-3c6d8673-82af160b@{s2c.src}00\r\n
+      CSeq: 1 PRACK\r\n
+      Max-forwards: 70\r\n
+      Content-Length: 0\r\n
+- recv:
+    flow: c2s_contact
+    match: 'PRACK sip:'
+
+    # directed to INVITE rtp predict
+- send:
+    flow: s2c_rtp
+    data: !rtp
+        ssrc: 4567
+        marker: 1
+        payload: '12345'
+
+- recv:
+    flow: c2s_rtp
+    l7-proto: "RTP"
+
+    # directed to INVITE rtcp predict
+- send:
+    flow: s2c_rtcp
+    data:  '1234567'
+
+- recv:
+    flow: c2s_rtcp
+    match: '1234567'
+

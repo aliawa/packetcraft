@@ -8,7 +8,7 @@ flows:
 
     # Source nat testing
   'c2s':
-    src: 192.168.1.1
+    src: 192.168.2.1
     sport: 'random(5000-7000)'
     dst: 10.1.1.1
     dport: 5060
