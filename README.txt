@@ -286,4 +286,6 @@ exact text matches, fields extracted from payload or fields read from an
 external parameters files.
 
 
-
+If condition
+----------------------------------------------------------------------
+c2s.dst={destination:IP.src}    flows['c2s'].dst = fields['destination'] if 'destination' in fields else fields['IP.src']
