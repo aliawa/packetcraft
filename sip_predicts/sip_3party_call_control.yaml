@@ -3,7 +3,7 @@ flows:
     src: 10.1.1.1
     sport: 5060
   's2c_2':              # same as s2c_1, used to remember c2s_2 address
-    src: 10.1.1.1
+    src: s2c_1.src
     sport: 5060
   's2c1_contact':
     src: 's2c_1.src'
@@ -13,28 +13,28 @@ flows:
     sport: 5060
 
   'c2s_1':
-    src: 192.168.1.1
+    src: 192.168.2.1
     sport: 'random'
     dst: s2c_1.src
     dport: s2c_1.sport
   'c2s_2':
-    src: 192.168.1.2
+    src: 192.168.2.2
     sport: 'random'
     dst: s2c_1.src
     dport: s2c_1.sport
 
   'c2s1_rtp':
-    src: 192.168.1.1
+    src: c2s_1.src
     sport: 'random(4000-5000)'
   'c2s2_rtp':
-    src: 192.168.1.2
+    src: c2s_1.src
     sport: 'random(4000-5000)'
 
   's2c1_rtp':
-    src: 10.1.1.1
+    src: s2c_1.src
     sport: 'random(8000-9000)'
   's2c2_rtp':
-    src: 10.1.1.1
+    src: s2c_1.src
     sport: 'random(8000-9000)'
 
 

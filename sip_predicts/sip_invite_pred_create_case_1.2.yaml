@@ -24,7 +24,7 @@ flows:
 
   c2s:
     proto: udp
-    src: 192.168.2.1
+    src: 192.168.1.1
     sport: 'random(5000-6000)'
     dst: s2c.src
     dport: s2c.sport
@@ -85,7 +85,7 @@ scenario:
         CSeq: 1 INVITE\r\n
         Contact: <sip:9200014@{s2c.src}:{s2c.sport}>\r\n
         Content-Type: application/sdp\r\n
-        Content-Length: 217\r\n
+        Content-Length: 209\r\n
         \r\n
         v=0\r\n
         o=Genesys 2 1 IN IP4 {s2c_rtp.src}\r\n
@@ -119,7 +119,7 @@ scenario:
     flow: c2s_contact
     data: |-
       ACK sip:7405557000@{c2s_contact.dst}:{c2s_contact.dport};user=phone SIP/2.0\r\n
-      Via: SIP/2.0/UDP {s2c_via.dst}:{s2c_via.dport};branch=z9hG4bKbe15632f914B3568\r\n
+      Via: SIP/2.0/UDP {s2c.src}:{s2c.sport};branch=z9hG4bKbe15632f914B3568\r\n
       From: "7012" <sip:7405557012@{s2c_contact.src}:{s2c_contact.sport}>;tag=BA76D475-4FE052EC\r\n
       To: <sip:7405557000@{s2c_contact.src}:{s2c_contact.sport};tag=ABC\r\n
       Call-ID: 5a2fb8b1-3c6d8673-82af160b@{s2c.src}00\r\n
