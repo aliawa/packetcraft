@@ -742,12 +742,12 @@ def stop():
 # ---------------------------------------------------------------
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="execute tests")
-    parser.add_argument('-t', '--testfile', help='testfile name')
+    parser = argparse.ArgumentParser(formatter_class=lambda prog: argparse.HelpFormatter(prog,max_help_position=57))
+    parser.add_argument('-t', '--testfile', metavar='', help='testfile name .yaml', required=True, )
+    parser.add_argument('-r', '--routes',   metavar='', help='routing file .yaml', required=True)
+    parser.add_argument('-l', '--log',      metavar='', choices=['DEBUG','INFO','WARNING','ERROR','CRITICAL'], help='Set logging level {%(choices)s}', default='CRITICAL')
+    parser.add_argument('-p', '--params',   metavar='', help='parameter file')
     parser.add_argument('-s', '--savepcap', action='store_true', help='save pcap file')
-    parser.add_argument('-l', '--log', choices=['DEBUG','INFO','WARNING','ERROR','CRITICAL'], help='Set logging level', default='CRITICAL')
-    parser.add_argument('-r', '--routes', help='routing file')
-    parser.add_argument('-p', '--params', help='parameter file')
 
     # This is needed otherwise packet will appear twice in pcap
     conf.sniff_promisc=0
