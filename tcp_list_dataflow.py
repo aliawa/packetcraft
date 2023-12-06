@@ -214,7 +214,7 @@ class pcapsItr:
             pkt = self.p1
             self.p1 = None
         elif self.p2:
-            pkt = self.p1
+            pkt = self.p2
             self.p2 = None
         else:
             raise StopIteration
