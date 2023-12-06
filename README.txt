@@ -130,7 +130,7 @@ if search fails no error reported, and we don't ignore the packet
 - exec:
 extracted fields are assigned to flows dictionary. Exec only updates the flow
 s2c_rtp.dport=client_rtp
-c2s_rtp.dst={source:IP.src}
+c2s_rtp.dst={source:pkt.src}
 
 c2s_rtp.dst = {payload.source : pkt.src}
 c2s_rtp.dst = {source : pkt.src}              # use "source" if source is in "payload" dictionary else use pkt.src
