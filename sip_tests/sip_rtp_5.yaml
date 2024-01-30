@@ -1,0 +1,147 @@
+flows:
+  'c2s':
+    src: 192.168.1.1
+    sport: 5060
+    dst: 10.1.1.1
+    dport: 5060
+  's2c':
+    src: 10.1.1.1
+    sport: 5060
+  'c2s_rtp':
+    src: 192.168.1.1
+    sport: 16384
+  's2c_rtp':
+    src: 10.1.1.1
+    sport: 27254
+  's2c_rtcp':
+    src: s2c_rtp.src
+    sport: s2c_rtp.sport + 1
+  'c2s_rtcp':
+    src: c2s_rtp.src
+    sport: c2s_rtp.sport + 1
+
+
+scenario:
+- send:
+    flow: c2s
+    save: 'inv'
+    data: |-
+         INVITE sip:7405557000@{c2s.dst}:{c2s.dport};user=phone SIP/2.0\r\n
+         Via: SIP/2.0/UDP {c2s.src}:{c2s.sport};branch=z9hG4bKbe15632f914B3568\r\n
+         From: "7012" <sip:7405557012@{s2c.src}:{s2c.sport}>;tag=BA76D475-4FE052EC\r\n
+         To: <sip:7405557000@{s2c.src}:{s2c.sport}\r\n
+         Call-ID: 5a2fb8b1-3c6d8673-82af160a@{c2s.src}00\r\n
+         CSeq: 1 INVITE\r\n
+         Max-forwards: 70\r\n
+         Content-Type: application/sdp\r\n
+         Content-Length:   247\r\n
+         \r\n
+         v=0\r\n
+         o=- 978385019 978385019 IN IP4 {c2s_rtp.src}\r\n
+         s=Polycom IP Phone\r\n
+         c=IN IP4 {c2s_rtp.src}\r\n
+         t=0 0\r\n
+         a=sendrecv\r\n
+         m=audio {c2s_rtp.sport} RTP/AVP 0 8 18 101\r\n
+         a=rtpmap:0 PCMU/8000\r\n
+         a=rtpmap:8 PCMA/8000\r\n
+         a=rtpmap:18 G729/8000\r\n
+         a=rtpmap:101 telephone-event/8000
+- recv:
+    flow: s2c
+    match: INVITE.*
+    search:
+    - 'Via: (?P<via>.*)\r\n'
+    - 'Via: SIP/2.0/UDP (?P<client_ip>[\d.]+):(?P<client_port>\d+);'
+    - 'From: (?P<from>.*)\r\n'
+    - 'To: (?P<to>.*)\r\n'
+    - c=IN IP4 (?P<rtp_dst>.*)\r\n
+    - m=audio (?P<rtp_dport>\d+)
+    exec:
+    - s2c_rtp.dst=rtp_dst
+    - s2c_rtp.dport=rtp_dport
+    - s2c.dst=client_ip
+    - s2c.dport=client_port
+
+- send:
+    flow: s2c
+    save: 'sip_ok'
+    data: |-
+        SIP/2.0 200 OK\r\n
+        Via: {via}\r\n
+        From: {from}\r\n
+        To: {to}\r\n
+        Call-ID: 6978DD1F-3937-40BF-89F8-A423F8DBDE5F-384@10.14.201.40\r\n
+        CSeq: 1 INVITE\r\n
+        Contact: <sip:9200014@{s2c.src}:{s2c.sport}>\r\n
+        Content-Type: application/sdp\r\n
+        Content-Length: 217\r\n
+        \r\n
+        v=0\r\n
+        o=Genesys 2 1 IN IP4 {s2c_rtp.src}\r\n
+        s=GSept-9.0.022.06\r\n
+        c=IN IP4 {s2c_rtp.src}\r\n
+        t=0 0\r\n
+        m=audio {s2c_rtp.sport} RTP/AVP 8 0 101\r\n
+        a=rtpmap:8 pcma/8000\r\n
+        a=rtpmap:0 pcmu/8000\r\n
+        a=rtpmap:101 telephone-event/8000\r\n
+        a=fmtp:101 0-15\r\n
+
+- recv:
+    flow: c2s
+    match: 'SIP/2.0 200 OK'
+    search:
+    - c=IN IP4 (?P<rtp_dst>.*)\r\n
+    - m=audio (?P<rtp_dport>\d+)
+    exec:
+    - c2s_rtp.dst=rtp_dst
+    - c2s_rtp.dport=rtp_dport
+    - c2s_rtcp.dst=rtp_dst
+    - c2s_rtcp.dport=rtp_dport + 1
+
+- send:
+    flow: s2c_rtp
+    data: !rtp
+        ssrc: 4567
+        marker: 1
+        payload: '12345'
+
+- recv:
+    flow: c2s_rtp
+    l7-proto: "RTP"
+
+
+- loop-start:
+    count: 3
+
+- delay:
+    timeout: 60000
+
+- send:
+    flow: s2c_rtp
+    data: !rtp
+        payload: 'ABCDEF'
+
+- recv:
+    flow: c2s_rtp
+    l7-proto: "RTP"
+
+- loop-end:
+    cond: None
+
+- send: 
+    flow: c2s
+    name: 'inv'
+
+- recv:
+    flow: s2c
+    match: 'INVITE'
+
+- send: 
+    flow: s2c
+    name: 'sip_ok'
+
+- recv:
+    flow: c2s
+    match: 'SIP/2.0 200 OK'

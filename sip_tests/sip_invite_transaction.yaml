@@ -5,10 +5,10 @@ flows:
     dst: 10.1.1.1
     dport: 5060
   s2c:
-    src: 11.2.2.2 # dst-natted
-    sport: 6000
-    # src: 10.1.1.1 # original
-    # sport: 5060
+    # src: 11.2.2.2 # dst-natted
+    # sport: 6000
+    src: 10.1.1.1 # original
+    sport: 5060
   s2c_rtp:
     src: 10.1.1.2
     sport: 22000

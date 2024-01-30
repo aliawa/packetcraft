@@ -245,7 +245,7 @@ Parsing L7 protocol
     l7-proto: "RTP"
 
 
-Scenario commands
+Delay in milli-seconds
 ----------------------------------------------------------------------
 - delay:
     timeout: 5

@@ -1,77 +1,69 @@
-
 flows:
- - name: 'c2s'
-   proto: 'tcp'
-   intf: 'eth1'
-   src: '192.168.1.1'
-   sport: 5050
-   dst: '10.1.1.1'
-   dport: 21
+  'c2s':
+     proto: 'tcp'
+     src: '192.168.1.1'
+     sport: 'random(3000-4000)'
+     dst: '10.1.1.1'
+     dport: 21
 
- - name: 's2c'
-   proto: 'tcp'
-   intf: 'eth2'
-   src: '10.1.1.1'
-   sport: 21
-   dst: '192.168.1.1'
-   dport: 5050
+  's2c':
+     proto: 'tcp'
+     src: '10.1.1.1'
+     sport: 21
 
-
- - name: 's2c_data'
+'s2c_data':
    proto: 'tcp'
-   intf: 'eth2'
-   src: '10.1.1.1'
+   src: s2c.ip
    sport: 20
-   dst: '192.168.1.1'
-   dport: 56121
+   dst: c2s.src
 
 scenario: 
- # Handshake
- - flow: 'c2s'
-   action: 'send'
-   flags: S
+- send:
+    flow: 'c2s'
+    flags: S
 
- - flow: 's2c'
-   action: 'recv'
-   flags: S
-   update: True
+- recv:
+    flow: 's2c'
+    flags: S
+    exec:
+    - s2c.dst=pkt.src
+    - s2c.dport=pkt.sport
 
- - flow: 's2c'
-   action: 'send'
-   flags: SA
+- send:
+    flow: 's2c'
+    flags: SA
 
- - flow: 'c2s'
-   action: 'recv'
+- recv:
+   flow: 'c2s'
    flags: SA
 
  # FTP session  
- - action: 'send'
+- send:
    flow: 'c2s'
-   type: text
    data: |-
-     USER aawais
+     USER aawais\r\n
 
- - action: 'recv'
-   flow: 's2c'
-   match: 'USER.*'
+- recv:
+    flow: 's2c'
+    match: 'USER.*'
 
- - action: 'delay'
-   timeout: 500
+- delay:
+    timeout: 500
 
- - action: 'send'
-   flow: 's2c'
-   type: text
-   data: |-
-     331 Enter password.
+- send:
+    flow: 's2c'
+    data: |-
+      331 Enter password.\r\n
 
- - action: 'recv'
-   flow: 'c2s'
+- recv:
+    flow: 'c2s'
+    match: '331'
 
- - action: 'send'
-   flow: 'c2s'
-   type: text
-   data: |-
-     PORT 192,168,1,1,219,57
+- send:
+    flow: 'c2s'
+    data: |-
+      PORT 192,168,1,1,219,57\r\n
+
 
  - flow: 's2c'
    action: 'recv'
