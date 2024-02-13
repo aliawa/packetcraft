@@ -145,3 +145,13 @@ scenario:
 - recv:
     flow: c2s
     match: 'SIP/2.0 200 OK'
+
+
+- send:
+    flow: s2c_rtp
+    data: !rtp
+        payload: 'ABCDEF'
+
+- recv:
+    flow: c2s_rtp
+    l7-proto: "RTP"

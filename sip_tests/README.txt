@@ -13,6 +13,10 @@ sip_rtp_4.txt
 3. same as sip_rtp_3.yaml, but rtp session is kept alive until predict expires, then re-invite and 200 ok
 sip_rtp_5.txt
 
+3. same as sip_rtp_4.yaml, but rtp session is kept alive until predict expires, then re-invite and 200 ok
+sip_rtp_6.txt
+
+
 
 NAT policies used in testing
 ----------------------------------------------------------------------
