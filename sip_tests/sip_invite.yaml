@@ -28,7 +28,8 @@ scenario:
       Contact: <sip:7405557012@{c2s.src}:7060>\r\n
       User-agent: PolycomSoundPointIP-SPIP_501-UA/2.0.2.0076\r\n
       Supported: 100rel\r\n
-      Supported: replaces\r\n allow-events: talk\r\n
+      Supported: replaces\r\n
+      Allow-events: talk\r\n
       Max-forwards: 70\r\n
       Allow: INVITE, ACK, BYE, CANCEL, OPTIONS, INFO, MESSAGE, SUBSCRIBE, NOTIFY, PRACK, UPDATE, REFER\r\n
       Content-Type: application/sdp\r\n

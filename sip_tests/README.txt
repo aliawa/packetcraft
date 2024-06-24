@@ -1,23 +1,3 @@
-1. Just test creation of RTP/ RTCP predicts, no other predicts are created.
-sip_rtp_1.txt
-
-2. Bidirectional rtp predicts, but no predict conversion
-sip_rtp_2.txt
-
-3. RTP predict conversion, c2s rtp predict matched
-sip_rtp_3.txt
-
-3. RTP predict conversion, s2c rtp predict(The one created by 200 OK) matched
-sip_rtp_4.txt
-
-3. same as sip_rtp_3.yaml, but rtp session is kept alive until predict expires, then re-invite and 200 ok
-sip_rtp_5.txt
-
-3. same as sip_rtp_4.yaml, but rtp session is kept alive until predict expires, then re-invite and 200 ok
-sip_rtp_6.txt
-
-
-
 NAT policies used in testing
 ----------------------------------------------------------------------
 "dip_nat; index: 1" {
@@ -76,7 +56,30 @@ NAT policies used in testing
         terminal no;
 
 
+RTP SCENARIOS
+----------------------------------------------------------------------
+1. Just test creation of RTP/ RTCP predicts, no other predicts are created.
+sip_rtp_1.txt
 
+2. Bidirectional rtp predicts, but no predict conversion
+sip_rtp_2.txt
+
+3. RTP predict conversion, c2s rtp predict matched
+sip_rtp_3.txt
+
+3. RTP predict conversion, s2c rtp predict(The one created by 200 OK) matched
+sip_rtp_4.txt
+
+3. same as sip_rtp_3.yaml, but rtp session is kept alive until predict expires, then re-invite and 200 ok
+sip_rtp_5.txt
+
+3. same as sip_rtp_4.yaml, but rtp session is kept alive until predict expires, then re-invite and 200 ok
+sip_rtp_6.txt
+
+
+
+3PARTY SCENARIOS
+----------------------------------------------------------------------
 sip_call_3party_sip.yaml
     3rd party addresses only sip predict creation and conversion
 sip_call_3party_sip_client.yaml
@@ -88,6 +91,6 @@ sip_call_3party_rtp_merge_error.yaml
     what happens when a packet hits a predict created by s2c flow but src addr of packet is not mapped
     This case fails in ALG 1.5
 sip_call_3party_rtp_merge_error_2.yaml
-    same as sip_call_3party_rtp_merge_error_2.yaml, but the 200 OK from server hits a predict instead 
+    same as sip_call_3party_rtp_merge_error.yaml, but the 200 OK from server hits a predict instead 
     of the flow created by INVITE, This case does not work in ALG 1.5, but it also fails in ALG 1.0
 
