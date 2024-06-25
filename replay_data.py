@@ -787,6 +787,8 @@ if __name__ == '__main__':
         genlog.critical ("KeyError: {}".format(inst))
     except Error as err:
         genlog.critical ("Error: {}".format(err))
+    except ValueError:
+        genlog.critical ("[x] Test failed because a required field is missing in the message")
     finally:
         stop()
 
