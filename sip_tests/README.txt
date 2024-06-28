@@ -94,3 +94,24 @@ sip_call_3party_rtp_merge_error_2.yaml
     same as sip_call_3party_rtp_merge_error.yaml, but the 200 OK from server hits a predict instead 
     of the flow created by INVITE, This case does not work in ALG 1.5, but it also fails in ALG 1.0
 
+
+TODO
+----------------------------------------------------------------------
+1) Add a parse_sip:
+    This will parse the received message as sip payload, so a sip dictionary 
+    becomes available.
+    sip.via     entire sip via header
+    sip.via.ip
+    sip.contact.port
+
+    Example:
+    exec:
+        - parse_sip()
+        - parse_ftp()
+
+        - parse('sip') 
+        - parse('ftp')
+    parser: sip
+    parser: ftp
+
+
