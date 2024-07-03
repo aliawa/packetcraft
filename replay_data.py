@@ -170,7 +170,7 @@ def l3_l4_match(pkt, fl, act):
             genlog.debug("proto no match, expecting UDP")
             return False
         if (fl.sport and int(fl.sport) != int (pkt[UDP].dport)):
-            genlog.debug("packet dort no match expecting {} != pkt dport {}".format(fl.sport, pkt[UDP].dport))
+            genlog.debug("packet dport no match expecting {} != pkt dport {}".format(fl.sport, pkt[UDP].dport))
             return False
 
     if ("flags" in act  and act['flags'] != pkt[TCP].flags):
