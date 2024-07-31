@@ -115,3 +115,13 @@ TODO
     parser: ftp
 
 
+
+REGISTRATION
+----------------------------------------------------------------------
+sip_regiter.yaml
+    SIP register request
+
+sip_register_ok.yaml
+    SIP register + response
+
+

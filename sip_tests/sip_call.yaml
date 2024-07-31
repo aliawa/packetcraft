@@ -41,7 +41,7 @@ scenario:
          INVITE sip:7405557000@{c2s.dst}:{c2s.dport};user=phone SIP/2.0\r\n
          Via: SIP/2.0/UDP {c2s.src}:{c2s.sport};branch=z9hG4bKbe15632f914B3568\r\n
          From: "7012" <sip:7405557012@{s2c.src}:{s2c.sport}>;tag=BA76D475-4FE052EC\r\n
-         To: <sip:7405557000@{s2c.src}:{s2c.sport}\r\n
+         To: <sip:7405557000@{s2c.src}:{s2c.sport}>\r\n
          Call-ID: 5a2fb8b1-3c6d8673-82af160a@{c2s.src}00\r\n
          CSeq: 1 INVITE\r\n
          Max-forwards: 70\r\n
@@ -81,7 +81,7 @@ scenario:
         SIP/2.0 200 OK\r\n
         Via: {via}\r\n
         From: {from}\r\n
-        To: {to}\r\n
+        To: {to};tag=SERVER-4FE052EC\r\n
         Call-ID: 5a2fb8b1-3c6d8673-82af160a@{c2s.src}00\r\n
         CSeq: 1 INVITE\r\n
         Contact: <sip:9200014@{s2c_contact.src}:{s2c_contact.sport}>\r\n
@@ -120,12 +120,16 @@ scenario:
          ACK sip:7405557000@{c2s.dst}:{c2s.dport};user=phone SIP/2.0\r\n
          Via: SIP/2.0/UDP {c2s.src}:{c2s.sport};branch=z9hG4bKbe\r\n
          From: "7012" <sip:7405557012@{s2c.src}:{s2c.sport}>;tag=BA76D475-4FE052EC\r\n
-         To: <sip:7405557000@{s2c.src}:{s2c.sport}\r\n
+         To: <sip:7405557000@{s2c.src}:{s2c.sport}>;tag=SERVER-4FE052EC\r\n
          Call-ID: 5a2fb8b1-3c6d8673-82af160a@{c2s.src}00\r\n
          CSeq: 1 ACK\r\n
          Max-forwards: 70\r\n
          Content-Length: 0\r\n
          \r\n
+
+- recv:
+    flow: s2c_contact
+    match: 'ACK'
 
 - send:
     flow: s2c_rtp

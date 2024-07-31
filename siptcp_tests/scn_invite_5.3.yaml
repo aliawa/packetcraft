@@ -2,7 +2,7 @@ flows:
   'c2s':
      proto: tcp
      src: 192.168.0.113
-     sport: 'random'
+     sport: 'random (5000-9000)'
      dst: 12.0.2.114
      dport: 5060
 

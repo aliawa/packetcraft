@@ -41,7 +41,7 @@ scenario:
     data: |-
       INVITE sip:7405557000@{s2c.src}:{s2c.sport};user=phone SIP/2.0\r\n
       Via: SIP/2.0/UDP {c2s_via.src}:{c2s_via.sport};branch=z9hG4bKbe15632f914B3568\r\n
-      From: "7012" <sip:7405557012@{s2c.src}:{s2c.sport}>;tag=BA76D475-4FE052EC\r\n
+      From: "7012" <sip:7405557012@{s2c.src}:{s2c.sport}>;tag=CLIENT-4FE052EC\r\n
       To: <sip:7405557000@{s2c.src}:{s2c.sport};user=phone>\r\n
       Call-ID: 5a2fb8b1-3c6d8673-82af160a@{c2s.src}00\r\n
       CSeq: 1 INVITE\r\n
@@ -67,7 +67,7 @@ scenario:
     data: |-
       SIP/2.0 200 OK\r\n
       Via: SIP/2.0/UDP {s2c.dst}:{s2c.dport};branch=z9hG4bKbe15632f914B3568\r\n
-      From: "7012" <sip:7405557012@{s2c.src}:{s2c.sport}>;tag=BA76D475-4FE052EC\r\n
+      From: "7012" <sip:7405557012@{s2c.src}:{s2c.sport}>;tag=CLIENT-4FE052EC\r\n
       To: <sip:7405557000@{s2c.src}:{s2c.sport};user=phone>\r\n
       Call-ID: 5a2fb8b1-3c6d8673-82af160a@{c2s.src}00\r\n
       CSeq: 1 INVITE\r\n
@@ -86,9 +86,9 @@ scenario:
 - send:
     flow: c2s_contact
     data: |-
-      ACK sip:7405557000@10.1.1.1:5060;user=phone SIP/2.0\r\n
+      ACK sip:7405557000@{s2c_contact.dst}:{s2c_contact.dport};user=phone SIP/2.0\r\n
       Via: SIP/2.0/UDP {c2s_contact.src}:{c2s_contact.sport};branch=z9hG4bKbe15632f914B3568\r\n
-      From: "7012" <sip:7405557012@{s2c.src}:{s2c.sport}>;tag=BA76D475-4FE052EC\r\n
+      From: "7012" <sip:7405557012@{s2c.src}:{s2c.sport}>;tag=CLIENT-4FE052EC\r\n
       To: <sip:7405557000@{s2c.src}:{s2c.sport};tag=SERVER-4FE052EC\r\n
       Call-ID: 5a2fb8b1-3c6d8673-82af160a@{c2s.src}00\r\n
       CSeq: 1 ACK\r\n
@@ -105,7 +105,7 @@ scenario:
       INVITE sip:7405557000@{s2c_contact.dst}:{s2c_contact.dport};user=phone SIP/2.0\r\n
       Via: SIP/2.0/UDP {s2c_via.src}:{s2c_via.sport};branch=z9hG4bKbe15632f914B3569\r\n
       From: "7012" <sip:7405557012@{s2c.src}:{s2c.sport}>;tag=SERVER-4FE052EC\r\n
-      To: <sip:7405557000@{s2c.src}:{s2c.sport}>;tag=BA76D475-4FE052EC\r\n
+      To: <sip:7405557000@{s2c.src}:{s2c.sport}>;tag=CLIENT-4FE052EC\r\n
       Call-ID: 5a2fb8b1-3c6d8673-82af160a@{c2s.src}00\r\n
       CSeq: 1 INVITE\r\n
       Contact: <sip:7405557012@{s2c_contact.src}:{s2c_contact.sport}>\r\n
