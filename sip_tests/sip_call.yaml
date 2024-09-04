@@ -1,30 +1,30 @@
 flows:
     # Destination nat testing
     #  'c2s':
-    #    src: 192.168.1.1
+    #    src: 192.168.1.49
     #    sport: 5060
     #    dst: 100.10.10.10
     #    dport: 6000
 
   # Source nat testing
   's2c':
-    src: 10.1.1.1
+    src: 10.1.1.49
     sport: 5060
 
   'c2s':
-    src: 192.168.1.1
+    src: 192.168.1.49
     sport: 5060
     dst: s2c.src
     dport: s2c.sport
 
   's2c_contact':
-    src: 10.1.1.1
+    src: 10.1.1.49
     sport: 5070
   'c2s_rtp':
-    src: 192.168.1.1
+    src: 192.168.1.49
     sport: 16384
   's2c_rtp':
-    src: 10.1.1.1
+    src: 10.1.1.49
     sport: 27254
   's2c_rtcp':
     src: s2c_rtp.src

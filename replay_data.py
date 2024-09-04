@@ -315,7 +315,7 @@ def update_flow(pkt, fl, act):
     
         if not val:
             genlog.error(f"[!] Warning: key {flds.values()} not found")
-            raise(ValueError)
+            raise(MyValueError)
         else:
             setattr(dicts['flows'][lhs[0]], lhs[2], val)
             genlog.debug(f"set attribute: Flow['{lhs[0]}'].{lhs[2]} = {val}")
@@ -426,29 +426,23 @@ def do_recv(act, c):
 
 
 def ip2mac(ip):
-    ipadr = ipaddress.ip_address(ip)
-    for dev,val in routing['interfaces'].items():
-        for net in val['ips']:
-            if ipadr in ipaddress.ip_network(net):
-                return val['mac']
-    raise Error (f"[x] No mac for {ip}")
+    return routing['interfaces'][ip2dev(ip)]
 
 
 def ip2dev(ip):
     ipadr = ipaddress.ip_address(ip)
-    for dev,val in routing['interfaces'].items():
-        for net in val['ips']:
-            if ipadr in ipaddress.ip_network(net):
-                return dev
-    raise Error (f"[x] No device for {ip}")
+    for net in routing['routing']:
+        if ipadr in ipaddress.ip_network(net):
+            return routing['routing'][net]['dev']
+    raise Error (f"No outgoing interface for {ip}")
 
 
-def ip2route(ip):
+def ip2nxt_hop(ip):
     ipadr = ipaddress.ip_address(ip)
     for net in routing['routing']:
         if ipadr in ipaddress.ip_network(net):
-            return routing['routing'][net]
-    raise Error (f"No route to {ip}")
+            return routing['routing'][net]['next-hop']
+    raise Error (f"No route from {ip}")
 
 
 
@@ -464,7 +458,7 @@ def create_packet(act):
         raise Error ("No destination port for {}".format(act['flow']))
 
     # Ether/IP
-    ip_layr = Ether(src=fl.src_mac, dst=(ip2route(fl.dst)['next-hop'])) / IP(src=fl.src,dst=fl.dst) 
+    ip_layr = Ether(src=fl.src_mac, dst=(ip2nxt_hop(fl.src))) / IP(src=fl.src,dst=fl.dst) 
     ip_layr[IP].id = fl.ipid
     fl.ipid += 1
     if hasattr(fl, 'tos'):
@@ -535,7 +529,7 @@ def do_send(act, c):
         pkt = create_packet(act)
 
     fl = dicts['flows'][act['flow']]
-    intf = ip2route(fl.dst)['dev']
+    intf = ip2dev(fl.src)
 
     if TCP in pkt:
         genlog.debug("send to {}:{} intf {}".format(pkt[IP].dst, pkt[TCP].dport, intf))
@@ -787,8 +781,10 @@ if __name__ == '__main__':
         genlog.critical ("KeyError: {}".format(inst))
     except Error as err:
         genlog.critical ("Error: {}".format(err))
-    except ValueError:
+    except MyValueError:
         genlog.critical ("[x] Test failed because a required field is missing in the message")
+    except ValueError:
+        print(traceback.format_exc())
     finally:
         stop()
 

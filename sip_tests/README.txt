@@ -124,4 +124,13 @@ sip_regiter.yaml
 sip_register_ok.yaml
     SIP register + response
 
+BASIC SCENARIOS
+----------------------------------------------------------------------
+sip_invite.yaml
+    send sip invite.
 
+sip_invite_snd_rcv.yaml
+    send sip invite and check that is received on the other side
+
+sip_invite_200.yaml
+    send invite, recv invite, send 200 OK, receive 200 OK

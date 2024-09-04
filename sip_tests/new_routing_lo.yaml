@@ -1,0 +1,14 @@
+# next-hop and egress-interface for each source ip
+'routing':
+  '192.168.0.0/16':
+      next-hop: 2e:bf:44:66:b2:e5
+      dev: trust_e
+  '10.1.1.0/24':
+      next-hop:  ee:60:39:5b:67:a4
+      dev: untrust_e
+
+
+# Local interfaces and their mac addresses
+'interfaces':
+  'untrust_e': 96:a3:b9:cf:57:8f
+  'trust_e'  : 6e:08:8e:c4:26:4c
