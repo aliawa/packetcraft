@@ -42,6 +42,14 @@ Fields can be inserted that were extracted from the received packets.
 If the spaces are important in the data, for example in case of formated xml
 use "data: |", otherwise use "data: |-". "|-" will strip extra white spaces
 
+use "data: |2" to tell how many indent spaces
+Example: 
+- send:
+    flow: c2s
+    data: |2
+      \n
+      x-my=0\r\n
+
 injecting data in L7 payload:
 Following forms are supported:
 - {<flow_name>.<Flow field>}
@@ -117,8 +125,11 @@ gets correct seq and ack numbers but sent later simulating delay
 
 
 - match:  (string)
-regex match at begining of payload, no fields can be extracted
-only one match expression is allowed
+    Regex match at begining of payload
+    No fields can be extracted
+    Only one match expression is allowed
+  Example: Use of variables in match
+    match: 'INVITE sip:1028@{param.ruri_ip}:{param.ruri_port} SIP/2.0'
 
 
 - search: (list)
@@ -140,13 +151,14 @@ c2s_rtp.dst = via_src                         # use default dict 'payload'
 c2s_rtp.dst = payload.via_src                 # dict is specified
 
 
-- verify:
+- verify: (list)
 verify values in fields dict against the parameters dict
 payload.via_src == invite.via_src            # compare payload field with parameter field 
 via_src == invite.via_src                    # compare implicit payload field with parameter field 
 via_src == contact_src                       # compare two fields in payload
 payload.len == 1460                          # compare payload length as integer
 pkt.seq == 2315                              # compare tcp seq as integer
+contact_ip == param.contact_ip               # compare with a separate parameters file
 
 
 - send:

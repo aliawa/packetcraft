@@ -56,6 +56,28 @@ NAT policies used in testing
         terminal no;
 
 
+
+
+LOCAL REPLAY SETUP
+----------------------------------------------------------------------
+
+    REPLAY                                              FW-SIMULATOR  
+  +---------+                                            +---------+
+  |         |             trust_e | trust_i              |         |
+  |  Client +--o  <------->    o--+--o   <-------->   o--+- 1/1    |
+  |         |                     |                      |         |
+  |         |                     |                      |         |
+  |         |                     |                      |         |
+  |         |                     |                      |         |
+  |         |                     |                      |         |
+  |         |           untrust_e | untrust_i            |         |
+  |  Server +--o  <------->    o--+--o   <-------->   o--+- 1/2    |
+  |         |                     |                      |         |
+  +---------+                     |                      +---------+
+                                  
+
+
+
 RTP SCENARIOS
 ----------------------------------------------------------------------
 1. Just test creation of RTP/ RTCP predicts, no other predicts are created.

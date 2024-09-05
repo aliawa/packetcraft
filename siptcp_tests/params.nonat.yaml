@@ -1,13 +1,13 @@
 param:
-    ruri_ip: '12.0.2.114'
+    ruri_ip: '10.1.1.49'
     ruri_port: '5060'
-    via_ip: 192.168.0.113
+    via_ip: 192.168.1.49
     via_port: '5060'
-    contact_ip: 192.168.0.113
+    contact_ip: 192.168.1.49
     contact_port: '5060'
     sdp_l: '145'
-    sdp_c: 192.168.0.113
-    sdp_o: 192.168.0.113
+    sdp_c: 192.168.1.49
+    sdp_o: 192.168.1.49
     sdp_m: '6000'
     seq: 66660
     ctrl_reg_seq: 68075
