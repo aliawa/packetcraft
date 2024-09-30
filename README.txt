@@ -300,3 +300,17 @@ external parameters files.
 If condition
 ----------------------------------------------------------------------
 c2s.dst={destination:IP.src}    flows['c2s'].dst = fields['destination'] if 'destination' in fields else fields['IP.src']
+
+
+
+Convert a long text line to fixed length lines
+--------------------------------------------------------------------------------
+Break long output lines from base64 to fixed length lines to include in 
+replay_data.py scenarios
+
+Usage:
+    split_base64.py <output line size>
+Example:
+    base64 dns_resp_local.bin | python3 split_base64.py 79
+Sample use:
+    replay_data.py -t protocol_tests/dns.yaml -r sip_tests/routing_192.yaml -l INFO
