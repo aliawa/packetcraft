@@ -1,3 +1,9 @@
+*--------------------------------------------------------------------*
+|                                                                    |
+|                           replay_data.py                           |
+|                                                                    |
+*--------------------------------------------------------------------*
+
 Need for a protocol traffic generator
 ----------------------------------------------------------------------
 Why a black box testing tool is needed
@@ -16,6 +22,7 @@ Why a black box testing tool is needed
    somtimes when the body is xml the lines end with '\n' only and not '\r\n'
 
 
+
 Features
 ----------------------------------------------------------------------
 - Update the dst-address/port of the flow that received a response.
@@ -25,7 +32,6 @@ Features
   be different from the sent data because of NAT
 - insert extracted data from received packets into the sent packets.
 - receive timesout after 10 seconds but the period can be customized using the "timeout" command
-
 
 
 
@@ -61,6 +67,7 @@ Example:
 Transport: RTP/AVP/UDP;unicast;client_port={client_rtp}-{client_rtcp};server_port={s2c_rtp.sport}-{s2c_rtcp.sport}
 
 
+
 Flow
 ----------------------------------------------------------------------
 The flow is like a socket if the both souce and destination are given
@@ -75,6 +82,7 @@ flows:
      sport: 'random'
 
 
+
 Receive Actions
 ----------------------------------------------------------------------
 - search and exec are lists
@@ -82,6 +90,7 @@ Receive Actions
 - Add a receive action even if no data needs to be extracted to update the TCP ACK counter
 
 When receive fails, exception is thrown to indicate that the test has failed
+
 
 
 Dictionaries avaialable for commands
@@ -238,7 +247,8 @@ Request URI::
 Content Length:
 '\s+\d{3}\r\n'
 
-    
+
+
 Sending RTP
 ----------------------------------------------------------------------
 - send:
@@ -249,11 +259,13 @@ Sending RTP
         payload: '12345'
 
 
+
 Parsing L7 protocol
 ----------------------------------------------------------------------
 - recv:
     flow: c2s_rtp
     l7-proto: "RTP"
+
 
 
 Delay in milli-seconds
@@ -272,11 +284,15 @@ replay data tool can be used to replay a scenario described in a yaml file.
 
 replay_data.py -t test.yaml -r routing_conf.yaml -l INFO
 
+
+
 Routing
 -------
 replay data uses its own routing rules, and interface confuguration that are 
 independent of the underlying os routing. Therefore no routing or ip address
 changes are required in the replay machine.
+
+
 
 Scenario
 --------
@@ -297,6 +313,7 @@ exact text matches, fields extracted from payload or fields read from an
 external parameters files.
 
 
+
 If condition
 ----------------------------------------------------------------------
 c2s.dst={destination:IP.src}    flows['c2s'].dst = fields['destination'] if 'destination' in fields else fields['IP.src']
@@ -314,3 +331,15 @@ Example:
     base64 dns_resp_local.bin | python3 split_base64.py 79
 Sample use:
     replay_data.py -t protocol_tests/dns.yaml -r sip_tests/routing_192.yaml -l INFO
+
+
+
+#--------------------------------------------------------------------#
+|                                                                    |
+|                       tcp_list_dataflow.py                         |
+|                                                                    |
+#--------------------------------------------------------------------#
+
+python3 tcp_list_dataflow.py -pc 3286 -ps 21 -o flow_c2s -r rx tx
+
+
