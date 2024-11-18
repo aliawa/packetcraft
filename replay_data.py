@@ -143,6 +143,21 @@ def do_delay(act, c):
     return c+1
 
 
+def handle_non_ip(pkt):
+    if ARP in pkt and pkt[ARP].op == 1:
+        try:
+            mac = ip2mac(pkt.pdst);
+            genlog.debug(f"generate arp reply for {pkt.pdst} mac {mac} telling {pkt.psrc}")
+            arp_reply = Ether(src=mac, dst="ff:ff:ff:ff:ff:ff")/ARP(op="is-at", hwsrc=mac, psrc=pkt.pdst, hwdst="ff:ff:ff:ff:ff:ff", pdst=pkt.psrc)
+            sendp(arp_reply, iface=ip2dev(pkt.pdst))
+        except Error:
+            genlog.debug("Error: non IP packet parsing")
+            pass
+    else:
+        genlog.debug("non IP packet: ignoring")
+
+
+
 def l3_l4_match(pkt, fl, act):
     if (fl.intf != pkt.sniffed_on):
         genlog.debug("intf no match expecting {} != pkt {}".format(fl.intf, pkt.sniffed_on))
@@ -151,7 +166,8 @@ def l3_l4_match(pkt, fl, act):
         genlog.debug("intf match expecting {} = pkt {}".format(fl.intf, pkt.sniffed_on))
 
     if (not pkt.haslayer(IP)):
-        genlog.debug("non IP packet: ignoring")
+        handle_non_ip(pkt)
+
         return False
 
     if (fl.src and fl.src != pkt[IP].dst):
