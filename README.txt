@@ -124,73 +124,80 @@ Example usage of dictionaries:
 Commands
 ----------------------------------------------------------------------
 - recv:
-Add a recv action even if no data needs to be extracted to update the ACK
-counter
+    Add a recv action even if no data needs to be extracted to update the ACK
+    counter
 
 
 - create:
-packet is created but not sent. It is created at a point in scenario so it
-gets correct seq and ack numbers but sent later simulating delay
+    packet is created but not sent. It is created at a point in scenario so it
+    gets correct seq and ack numbers but sent later simulating delay
+    name: ack_1     # name to use in send action
 
 
 - match:  (string)
     Regex match at begining of payload
     No fields can be extracted
     Only one match expression is allowed
-  Example: Use of variables in match
+    Example: Use of variables in match
     match: 'INVITE sip:1028@{param.ruri_ip}:{param.ruri_port} SIP/2.0'
 
 
 - search: (list)
-all found fields are stored in fields dictionary
-if search fails no error reported, and we don't ignore the packet
+    all found fields are stored in fields dictionary
+    if search fails no error reported, and we don't ignore the packet
 
 
 - exec: (list)
-extracted fields are assigned to flows dictionary. Exec only updates the flow
-s2c_rtp.dport=client_rtp
-c2s_rtp.dst={source:pkt.src}
+    extracted fields are assigned to flows dictionary. Exec only updates the flow
+    s2c_rtp.dport=client_rtp
+    c2s_rtp.dst={source:pkt.src}
 
-c2s_rtp.dst = {payload.source : pkt.src}
-c2s_rtp.dst = {source : pkt.src}              # use "source" if source is in "payload" dictionary else use pkt.src
-                                              # from 'pkt' dictionary
-c2s_rtp.dst = {source : '1.1.1.1'}            # use "source" if source is in "payload" dictionary else use pkt.src
-c2s_rtp.dst = pkt.src
-c2s_rtp.dst = via_src                         # use default dict 'payload'
-c2s_rtp.dst = payload.via_src                 # dict is specified
+    c2s_rtp.dst = {payload.source : pkt.src}
+    c2s_rtp.dst = {source : pkt.src}              # use "source" if source is in "payload" dictionary else use pkt.src
+                                                  # from 'pkt' dictionary
+    c2s_rtp.dst = {source : '1.1.1.1'}            # use "source" if source is in "payload" dictionary else use pkt.src
+    c2s_rtp.dst = pkt.src
+    c2s_rtp.dst = via_src                         # use default dict 'payload'
+    c2s_rtp.dst = payload.via_src                 # dict is specified
 
 
 - verify: (list)
-verify values in fields dict against the parameters dict
-payload.via_src == invite.via_src            # compare payload field with parameter field 
-via_src == invite.via_src                    # compare implicit payload field with parameter field 
-via_src == contact_src                       # compare two fields in payload
-payload.len == 1460                          # compare payload length as integer
-pkt.seq == 2315                              # compare tcp seq as integer
-contact_ip == param.contact_ip               # compare with a separate parameters file
+    verify values in fields dict against the parameters dict
+    payload.via_src == invite.via_src            # compare payload field with parameter field 
+    via_src == invite.via_src                    # compare implicit payload field with parameter field 
+    via_src == contact_src                       # compare two fields in payload
+    payload.len == 1460                          # compare payload length as integer
+    pkt.seq == 2315                              # compare tcp seq as integer
+    contact_ip == param.contact_ip               # compare with a separate parameters file
 
 
 - send:
-name:                                       # retrieve saved packet with this name and send it
-save: name                                  # save the packet for future use with name
-if send fails exception is thrown to indicate the test has failed
+    name: 'ref-2'   # retrieve saved packet with this name and send it
+    save: 'ref-2'   # save the packet for future use with name
 
-- loop
-loop acts like a do-while loop. The body is executed at least
-once, the counter is checked at loop end and if still not zero then 
-the body of loop is executed again
-Example:
-  - loop-start:
-    - count: 44
+    if send fails exception is thrown to indicate the test has failed
 
-  - loop-end:
+- loop-start:
+- loop-end
+    loop acts like a do-while loop. The body is executed at least
+    once, the counter is checked at loop end and if still not zero then 
+    the body of loop is executed again
+    Example:
+      - loop-start:
+        - count: 44
+
+      - loop-end:
 
 
 - echo
-Debugging help
-echo: "blah blah"
+    Debugging help
+    echo: "blah blah"
 
 
+-save
+  body: |
+    v=0\r\n
+    o=user1 53655765 2353687637 IN IP4 {c2s.src}\r\n
 
 Implementation
 ----------------------------------------------------------------------
@@ -342,4 +349,15 @@ Sample use:
 
 python3 tcp_list_dataflow.py -pc 3286 -ps 21 -o flow_c2s -r rx tx
 
+
+#--------------------------------------------------------------------#
+|                                                                    |
+|                       New replay_data.py                           |
+|                                                                    |
+#--------------------------------------------------------------------#
+
+Global variables
+    - All flows: c2s, s2c etc.
+    - pkt
+    - pkt[Raw].len is available
 
