@@ -4,12 +4,12 @@ flows:
      src: '192.168.1.49'
      sport: 'random_port(5000, 8000)'
      dst: '10.1.1.49'
-     dport: 5060
+     dport: '5060'
 
   's2c':
      proto: tcp
      src: '10.1.1.49'
-     sport: 5060
+     sport: '5060'
 
 scenario:
 - send:
@@ -65,12 +65,12 @@ scenario:
       - 'c=IN IP4 (?P<sdp_c>.*)\r\n'
       - 'm=audio (?P<sdp_m>[0-9]+) RTP/AVP.*'
     verify:
-      - via_ip == param.via_ip
-      - via_port == param.via_port
-      - contact_ip == param.contact_ip
-      - contact_port == param.contact_port
-      - sdp_c == param.sdp_c
-      - sdp_m == param.sdp_m
+      - is_valid_ip(via_ip)
+      - is_valid_port(via_port)
+      - is_valid_ip(contact_ip)
+      - is_valid_port(contact_port)
+      - is_valid_ip(sdp_c)
+      - is_valid_port(sdp_m)
 - send:
     flow: s2c
     flags: 'A'

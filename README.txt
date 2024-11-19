@@ -1,3 +1,9 @@
+*--------------------------------------------------------------------*
+|                                                                    |
+|                           replay_data.py                           |
+|                                                                    |
+*--------------------------------------------------------------------*
+
 Need for a protocol traffic generator
 ----------------------------------------------------------------------
 Why a black box testing tool is needed
@@ -16,6 +22,7 @@ Why a black box testing tool is needed
    somtimes when the body is xml the lines end with '\n' only and not '\r\n'
 
 
+
 Features
 ----------------------------------------------------------------------
 - Update the dst-address/port of the flow that received a response.
@@ -25,7 +32,6 @@ Features
   be different from the sent data because of NAT
 - insert extracted data from received packets into the sent packets.
 - receive timesout after 10 seconds but the period can be customized using the "timeout" command
-
 
 
 
@@ -61,6 +67,7 @@ Example:
 Transport: RTP/AVP/UDP;unicast;client_port={client_rtp}-{client_rtcp};server_port={s2c_rtp.sport}-{s2c_rtcp.sport}
 
 
+
 Flow
 ----------------------------------------------------------------------
 The flow is like a socket if the both souce and destination are given
@@ -75,6 +82,7 @@ flows:
      sport: 'random'
 
 
+
 Receive Actions
 ----------------------------------------------------------------------
 - search and exec are lists
@@ -82,6 +90,7 @@ Receive Actions
 - Add a receive action even if no data needs to be extracted to update the TCP ACK counter
 
 When receive fails, exception is thrown to indicate that the test has failed
+
 
 
 Dictionaries avaialable for commands
@@ -115,73 +124,80 @@ Example usage of dictionaries:
 Commands
 ----------------------------------------------------------------------
 - recv:
-Add a recv action even if no data needs to be extracted to update the ACK
-counter
+    Add a recv action even if no data needs to be extracted to update the ACK
+    counter
 
 
 - create:
-packet is created but not sent. It is created at a point in scenario so it
-gets correct seq and ack numbers but sent later simulating delay
+    packet is created but not sent. It is created at a point in scenario so it
+    gets correct seq and ack numbers but sent later simulating delay
+    name: ack_1     # name to use in send action
 
 
 - match:  (string)
     Regex match at begining of payload
     No fields can be extracted
     Only one match expression is allowed
-  Example: Use of variables in match
+    Example: Use of variables in match
     match: 'INVITE sip:1028@{param.ruri_ip}:{param.ruri_port} SIP/2.0'
 
 
 - search: (list)
-all found fields are stored in fields dictionary
-if search fails no error reported, and we don't ignore the packet
+    all found fields are stored in fields dictionary
+    if search fails no error reported, and we don't ignore the packet
 
 
 - exec: (list)
-extracted fields are assigned to flows dictionary. Exec only updates the flow
-s2c_rtp.dport=client_rtp
-c2s_rtp.dst={source:pkt.src}
+    extracted fields are assigned to flows dictionary. Exec only updates the flow
+    s2c_rtp.dport=client_rtp
+    c2s_rtp.dst={source:pkt.src}
 
-c2s_rtp.dst = {payload.source : pkt.src}
-c2s_rtp.dst = {source : pkt.src}              # use "source" if source is in "payload" dictionary else use pkt.src
-                                              # from 'pkt' dictionary
-c2s_rtp.dst = {source : '1.1.1.1'}            # use "source" if source is in "payload" dictionary else use pkt.src
-c2s_rtp.dst = pkt.src
-c2s_rtp.dst = via_src                         # use default dict 'payload'
-c2s_rtp.dst = payload.via_src                 # dict is specified
+    c2s_rtp.dst = {payload.source : pkt.src}
+    c2s_rtp.dst = {source : pkt.src}              # use "source" if source is in "payload" dictionary else use pkt.src
+                                                  # from 'pkt' dictionary
+    c2s_rtp.dst = {source : '1.1.1.1'}            # use "source" if source is in "payload" dictionary else use pkt.src
+    c2s_rtp.dst = pkt.src
+    c2s_rtp.dst = via_src                         # use default dict 'payload'
+    c2s_rtp.dst = payload.via_src                 # dict is specified
 
 
 - verify: (list)
-verify values in fields dict against the parameters dict
-payload.via_src == invite.via_src            # compare payload field with parameter field 
-via_src == invite.via_src                    # compare implicit payload field with parameter field 
-via_src == contact_src                       # compare two fields in payload
-payload.len == 1460                          # compare payload length as integer
-pkt.seq == 2315                              # compare tcp seq as integer
-contact_ip == param.contact_ip               # compare with a separate parameters file
+    verify values in fields dict against the parameters dict
+    payload.via_src == invite.via_src            # compare payload field with parameter field 
+    via_src == invite.via_src                    # compare implicit payload field with parameter field 
+    via_src == contact_src                       # compare two fields in payload
+    payload.len == 1460                          # compare payload length as integer
+    pkt.seq == 2315                              # compare tcp seq as integer
+    contact_ip == param.contact_ip               # compare with a separate parameters file
 
 
 - send:
-name:                                       # retrieve saved packet with this name and send it
-save: name                                  # save the packet for future use with name
-if send fails exception is thrown to indicate the test has failed
+    name: 'ref-2'   # retrieve saved packet with this name and send it
+    save: 'ref-2'   # save the packet for future use with name
 
-- loop
-loop acts like a do-while loop. The body is executed at least
-once, the counter is checked at loop end and if still not zero then 
-the body of loop is executed again
-Example:
-  - loop-start:
-    - count: 44
+    if send fails exception is thrown to indicate the test has failed
 
-  - loop-end:
+- loop-start:
+- loop-end
+    loop acts like a do-while loop. The body is executed at least
+    once, the counter is checked at loop end and if still not zero then 
+    the body of loop is executed again
+    Example:
+      - loop-start:
+        - count: 44
+
+      - loop-end:
 
 
 - echo
-Debugging help
-echo: "blah blah"
+    Debugging help
+    echo: "blah blah"
 
 
+-save
+  body: |
+    v=0\r\n
+    o=user1 53655765 2353687637 IN IP4 {c2s.src}\r\n
 
 Implementation
 ----------------------------------------------------------------------
@@ -238,7 +254,8 @@ Request URI::
 Content Length:
 '\s+\d{3}\r\n'
 
-    
+
+
 Sending RTP
 ----------------------------------------------------------------------
 - send:
@@ -249,11 +266,13 @@ Sending RTP
         payload: '12345'
 
 
+
 Parsing L7 protocol
 ----------------------------------------------------------------------
 - recv:
     flow: c2s_rtp
     l7-proto: "RTP"
+
 
 
 Delay in milli-seconds
@@ -272,11 +291,15 @@ replay data tool can be used to replay a scenario described in a yaml file.
 
 replay_data.py -t test.yaml -r routing_conf.yaml -l INFO
 
+
+
 Routing
 -------
 replay data uses its own routing rules, and interface confuguration that are 
 independent of the underlying os routing. Therefore no routing or ip address
 changes are required in the replay machine.
+
+
 
 Scenario
 --------
@@ -297,6 +320,44 @@ exact text matches, fields extracted from payload or fields read from an
 external parameters files.
 
 
+
 If condition
 ----------------------------------------------------------------------
 c2s.dst={destination:IP.src}    flows['c2s'].dst = fields['destination'] if 'destination' in fields else fields['IP.src']
+
+
+
+Convert a long text line to fixed length lines
+--------------------------------------------------------------------------------
+Break long output lines from base64 to fixed length lines to include in 
+replay_data.py scenarios
+
+Usage:
+    split_base64.py <output line size>
+Example:
+    base64 dns_resp_local.bin | python3 split_base64.py 79
+Sample use:
+    replay_data.py -t protocol_tests/dns.yaml -r sip_tests/routing_192.yaml -l INFO
+
+
+
+#--------------------------------------------------------------------#
+|                                                                    |
+|                       tcp_list_dataflow.py                         |
+|                                                                    |
+#--------------------------------------------------------------------#
+
+python3 tcp_list_dataflow.py -pc 3286 -ps 21 -o flow_c2s -r rx tx
+
+
+#--------------------------------------------------------------------#
+|                                                                    |
+|                       New replay_data.py                           |
+|                                                                    |
+#--------------------------------------------------------------------#
+
+Global variables
+    - All flows: c2s, s2c etc.
+    - pkt
+    - pkt[Raw].len is available
+

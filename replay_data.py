@@ -19,11 +19,11 @@ import pdb
 RCV_TIMEOUT=10 # timeout in seconds
 
 
-def evalport(fl, port):
-    if port in fl:
-        return eval('fl[port]')
-    else:
-        return random.randint(3000,65535)
+# def evalport(fl, port):
+#     if port in fl:
+#         return eval('fl[port]')
+#     else:
+#         return random.randint(3000,65535)
 #     if port in fl:
 #         portstr = str(fl[port])
 #         if re.match(r"\d+$", portstr):
@@ -46,6 +46,18 @@ def evalport(fl, port):
 def random_port(start, end):
     return random.randint(int(start), int(end))
 
+def is_valid_ip(ip):
+    try:
+        ipaddress.ip_address(ip)
+    except ValueError:
+        return False
+    return True
+
+def is_valid_port(port):
+    return port >=1000 and port < 65536
+
+
+
 
 
 # -----------------------------------------------------------
@@ -55,8 +67,7 @@ def random_port(start, end):
 class Flow:
     def __init__(self, fl):
         self.proto   = fl['proto'] if 'proto' in fl else 'udp'
-        # self.src     = eval(str(fl['src']))
-        self.src     = flds_eval(str(fl['src']))
+        self.src     = flds_eval(fl['src'])
         self.intf    = ip2dev(self.src)
         self.src_mac = ip2mac(self.src)
         self.ipid    = random.randint(1,100)
@@ -256,7 +267,7 @@ def l7_match(pkt, fl, act):
 
 
 
-def l7_search(pkt, fl, act):
+def l7_search(pkt, fl, act, name):
     assert 'search' in act
     if (Raw in pkt):
         for itm in act['search']:
@@ -266,7 +277,13 @@ def l7_search(pkt, fl, act):
                 genlog.debug("groupdict:{}".format(m.groupdict()))
                 for key,val in m.groupdict().items():
                     genlog.debug(f"search got {key}={val}")
-                dicts['payload'].update(m.groupdict())
+                if not name:
+                    name = 'recv'
+                if not name in globals():
+                    globals()[name] = {}
+                globals()[name].update(m.groupdict())
+
+                # dicts['payload'].update(m.groupdict())
             else:
                 genlog.warning(f"[!] Warning: search failed {itm}")
     else:
@@ -326,9 +343,9 @@ def flds_get_val(var):
 
         
 
-def update_flow(pkt, fl, act):
-    for itm in act['exec']:
-        exec(itm)
+# def update_flow(pkt, fl, act):
+#     for itm in act['exec']:
+#         exec(itm)
         # cmd = itm.partition('=')
         # lhs = cmd[0].partition('.')     # <flow_name>, '.', <Flow attribute>
         # rhs = cmd[2].strip()
@@ -355,11 +372,21 @@ def update_flow(pkt, fl, act):
 
 
 def l7_verify(pkt, fl, act):
-    assert 'verify' in act
-    assert isinstance(act['verify'], list), 'Verify is not a list'
-    assert 'payload' in dicts, 'Payload dictionary is required'
+    # assert 'verify' in act
+    # assert isinstance(act['verify'], list), 'Verify is not a list'
+    # assert 'payload' in dicts, 'Payload dictionary is required'
     for itm in act['verify']:
-        flds_eval (itm)
+        if eval(itm):
+            genlog.info(f"verification failed: {itm}")
+            raise Error("Verify failed")
+        else:
+            genlog.info(f"verified: {itm}")
+
+
+        #     genlog.info(f"verification failed: {lhs_d}.{lhs_n} != {flds_get_val(cmd[1])}, found:{dicts[lhs_d][lhs_n]}")
+        #     raise error("verify failed")
+        # else:
+        #     genlog.info(f"verified: {lhs_d}.{lhs_n} == {flds_get_val(cmd[1])}")
         # cmd = re.split(r'\s*==\s*', itm)
         # assert len(cmd) <= 2
 
@@ -380,8 +407,8 @@ def l7_verify(pkt, fl, act):
         #     genlog.info(f"verified: {lhs_d}.{lhs_n} == {flds_get_val(cmd[1])}")
 
 
-def update_dicts(pkt):
-    globals()['pkt'] = pkt
+# def update_dicts(pkt):
+#     globals()['pkt'] = pkt
     # dicts['pkt'] = {}
     # dicts['payload']={}
 
@@ -439,15 +466,20 @@ def do_recv(act, c):
             else:
                 continue
 
-        update_dicts(pkt)
+        # update_dicts(pkt)
+        globals()['pkt'] = pkt
 
 
+        name=None
+        if ("name" in act):
+            name=act['name']
         if ("echo" in act):
             echo(pkt, fl, act)
         if ("search" in act):
-            l7_search(pkt, fl, act)
+            l7_search(pkt, fl, act, name)
         if "exec" in act:
-            update_flow(pkt, fl, act)
+            for itm in act['exec']:
+                exec(itm)
         if "verify" in act:
             l7_verify(act, fl, act)
 
@@ -519,7 +551,7 @@ def create_packet(act):
     if 'data' in act:
         if type(act['data']) == str:
             patrn = re.compile(r'\{([^}]+)\}')
-            a1 = patrn.sub(lambda m: flds_eval(m.group(1)), act['data'])
+            a1 = patrn.sub(lambda m: str(flds_eval(m.group(1))), act['data'])
             data = "".join(a1.split('\n'))
 
             # replace literal \r\n 
@@ -601,30 +633,30 @@ def do_create(act, c):
 
 
 def do_loop_start(act, c):
-    if not 'loop' in dicts:
-        dicts['loop'] = {}
+    if not 'loop' in globals():
+        globals()['loop'] = {}
 
-    if 'jump' in dicts['loop']:
+    if 'jump' in loop:
         raise Error('Nested loops are not allowed')
     if 'count' in act:
-        dicts['loop']['count'] = act['count']-1
+        loop['count'] = act['count']-1
     else:
         raise Error("count is mandatory in loop")
-    dicts['loop']['jump'] = c+1
+    loop['jump'] = c+1
     return c+1
 
 
 
 def do_loop_end(act, c):
-    if not 'count' in dicts['loop']:
+    if not 'count' in loop:
         raise Error("loop-end without loop-start")
 
-    if dicts['loop']['count'] > 0:
-        dicts['loop']['count'] -= 1
-        return dicts['loop']['jump']
+    if loop['count'] > 0:
+        loop['count'] -= 1
+        return loop['jump']
     else:
-        del (dicts['loop']['jump'])
-        del (dicts['loop']['count'])
+        del (loop['jump'])
+        del (loop['count'])
         return c+1
 
 
@@ -738,13 +770,14 @@ def init(logl):
     setup_logging(logl)
 
 def setup(scenario_f, routes_f, params_f, pcap_f):
-    global dicts
+    # global dicts
     global routing
     global scenario
     global saved_pkts
     global fname
     global sniffer
     global rcvqueue
+    global recv          # last received packet
 
     with open(scenario_f, 'r') as f:
         scen_dict = yaml.full_load(f)
@@ -752,10 +785,12 @@ def setup(scenario_f, routes_f, params_f, pcap_f):
     with open(routes_f, 'r') as f:
         routing = yaml.safe_load(f)
 
-    dicts = {}
+    # dicts = {}
     if params_f:
         with open(params_f, 'r') as f:
-            dicts.update(yaml.full_load(f))
+            if not 'params' in globals():
+                globals()['params'] = {}
+            params.update(yaml.full_load(f))
 
     rcvqueue       = queue.Queue()  
     saved_pkts     = {}
@@ -832,19 +867,19 @@ if __name__ == '__main__':
         genlog.critical ("KeyError: {}".format(inst))
         exit()
        
-    try:
-        time.sleep(3)
-        run_scenario(scenario)
-    except KeyError as inst:
-        genlog.critical ("KeyError: {}".format(inst))
-    except Error as err:
-        genlog.critical ("Error: {}".format(err))
-    except MyValueError:
-        genlog.critical ("[x] Test failed because a required field is missing in the message")
-    except ValueError:
-        print(traceback.format_exc())
-    finally:
-        stop()
+    # try:
+    time.sleep(3)
+    run_scenario(scenario)
+    # except KeyError as inst:
+    #     genlog.critical ("KeyError: {}".format(inst))
+    # except Error as err:
+    #     genlog.critical ("Error: {}".format(err))
+    # except MyValueError:
+    #     genlog.critical ("[x] Test failed because a required field is missing in the message")
+    # except ValueError:
+    #     print(traceback.format_exc())
+    # finally:
+    #     stop()
 
 
 
