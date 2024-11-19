@@ -1,6 +1,8 @@
+DIR=$(dirname $0)
+
 if [[ $1 == "-h" || $1 == "--help" || -z "$1" ]]; then
-    python3 replay_data.py $* 
+    python3 $DIR/replay_data.py $* 
     echo 
     exit
 fi
-sudo python3 replay_data.py $*
+sudo python3 $DIR/replay_data.py $*

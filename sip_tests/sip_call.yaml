@@ -58,7 +58,7 @@ scenario:
          a=rtpmap:0 PCMU/8000\r\n
          a=rtpmap:8 PCMA/8000\r\n
          a=rtpmap:18 G729/8000\r\n
-         a=rtpmap:101 telephone-event/8000
+         a=rtpmap:101 telephone-event/8000\r\n
 - recv:
     flow: s2c
     match: INVITE.*
@@ -86,7 +86,7 @@ scenario:
         CSeq: 1 INVITE\r\n
         Contact: <sip:9200014@{s2c_contact.src}:{s2c_contact.sport}>\r\n
         Content-Type: application/sdp\r\n
-        Content-Length: 217\r\n
+        Content-Length: 211\r\n
         \r\n
         v=0\r\n
         o=Genesys 2 1 IN IP4 {s2c_rtp.src}\r\n

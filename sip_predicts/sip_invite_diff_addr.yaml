@@ -10,7 +10,7 @@
 flows:
   s2c:
     proto: udp
-    src: 10.1.1.2
+    src: 10.1.1.1
     sport: 5060
   s2c_via:
     proto: udp

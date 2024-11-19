@@ -21,20 +21,30 @@ RCV_TIMEOUT=10 # timeout in seconds
 
 def evalport(fl, port):
     if port in fl:
-        portstr = str(fl[port])
-        if re.match(r"\d+$", portstr):
-            return portstr
-
-        mch = re.search(r"random\s*\(\s*(?P<strt>\d+)+\s*-\s*(?P<endr>\d+)\s*\)", portstr)
-        if mch:
-            return random.randint(int(mch.group('strt')), int(mch.group('endr')))
-        elif portstr == 'random' :
-            return random.randint(3000,65535)
-        else:
-            return flds_eval(portstr)
+        return eval('fl[port]')
     else:
         return random.randint(3000,65535)
+#     if port in fl:
+#         portstr = str(fl[port])
+#         if re.match(r"\d+$", portstr):
+#             return portstr
 
+#         mch = re.search(r"random\s*\(\s*(?P<strt>\d+)+\s*-\s*(?P<endr>\d+)\s*\)", portstr)
+#         if mch:
+#             return random.randint(int(mch.group('strt')), int(mch.group('endr')))
+#         elif portstr == 'random' :
+#             return random.randint(3000,65535)
+#         else:
+#             return flds_eval(portstr)
+#     else:
+#         return random.randint(3000,65535)
+
+
+# -----------------------------------------------------------
+#                        Global Helpers
+# -----------------------------------------------------------
+def random_port(start, end):
+    return random.randint(int(start), int(end))
 
 
 
@@ -45,6 +55,7 @@ def evalport(fl, port):
 class Flow:
     def __init__(self, fl):
         self.proto   = fl['proto'] if 'proto' in fl else 'udp'
+        # self.src     = eval(str(fl['src']))
         self.src     = flds_eval(str(fl['src']))
         self.intf    = ip2dev(self.src)
         self.src_mac = ip2mac(self.src)
@@ -54,12 +65,12 @@ class Flow:
         self.ooq     = {}   # out of order queue
         self.l7      = {}   # Layer 7 data
 
-        self.sport   = evalport(fl,'sport')
+        self.sport   = flds_eval(fl['sport']) #evalport(fl,'sport')
 
         if 'dst' in fl:
-            self.dst = flds_eval(str(fl['dst']))
+            self.dst = flds_eval(fl['dst'])
         if 'dport' in fl:
-            self.dport = evalport(fl, 'dport')
+            self.dport = flds_eval(fl['dport'])
         if 'tos' in fl:
             self.tos = fl['tos']
         if 'mss' in fl:
@@ -79,6 +90,8 @@ class NoRoute(Error):
     def __init__(self, message):
         super().__init__(message)
 
+class MyValueError(Exception):
+    pass
 
 
 # --------------------------------------------------------------------------
@@ -266,75 +279,77 @@ def echo(pkt, fl, act):
 
 
 def flds_eval(exp):
-    if re.match(r"\d+", exp):
+    try:
+        return eval(exp)
+    except:
         return exp
 
-    mch = re.match(r"^(?P<lhs>[^\d\W]\w*(\.[^\d\W]\w*)?)?\s*(?P<op>[+*\/-]?)\s*(?P<rhs>([^\d\W]\w*\.*([^\d\W]\w*)|\d+))?", exp)
-    if (mch):
-        if mch.group('op'):
-            lhs = mch.group('lhs')
-            rhs = mch.group('rhs')
-            if mch.group('op') == '+':
-                return str(int(flds_get_val(lhs)) + int(flds_get_val(rhs)))
-            elif mch.group('op') == '-':
-                return str(int(flds_get_val(lhs)) - int(flds_get_val(rhs)))
-            elif mch.group('op') == '/':
-                return str(int(flds_get_val(lhs)) / int(flds_get_val(rhs)))
-            elif mch.group('op') == '*':
-                return str(int(flds_get_val(lhs)) * int(flds_get_val(rhs)))
-        else:
-            return flds_get_val(exp)
-    else:
-        raise Error(f"Bad expression {exp}")
+    # mch = re.match(r"^(?P<lhs>[^\d\W]\w*(\.[^\d\W]\w*)?)?\s*(?P<op>[+*\/-]?)\s*(?P<rhs>([^\d\W]\w*\.*([^\d\W]\w*)|\d+))?", exp)
+    # if (mch):
+    #     if mch.group('op'):
+    #         lhs = mch.group('lhs')
+    #         rhs = mch.group('rhs')
+    #         if mch.group('op') == '+':
+    #             return str(int(flds_get_val(lhs)) + int(flds_get_val(rhs)))
+    #         elif mch.group('op') == '-':
+    #             return str(int(flds_get_val(lhs)) - int(flds_get_val(rhs)))
+    #         elif mch.group('op') == '/':
+    #             return str(int(flds_get_val(lhs)) / int(flds_get_val(rhs)))
+    #         elif mch.group('op') == '*':
+    #             return str(int(flds_get_val(lhs)) * int(flds_get_val(rhs)))
+    #     else:
+    #         return flds_get_val(exp)
+    # else:
+    #     raise Error(f"Bad expression {exp}")
 
 
 
 def flds_get_val(var):
-    try:
-        if var[0] == "'" or var[0].isdigit():
-            if var.isdigit():
-                return int(var)
-            else:
-                return var
-        elif "." in var:
-            fld_d,_,fld_n = var.partition('.')
-            if fld_d in dicts['flows'].keys():
-                return str(getattr(dicts['flows'][fld_d], fld_n))
-            else:
-                return dicts[fld_d][fld_n]
-        else:
-            return dicts['payload'].get(var, None)
-    except KeyError:
-        print (f"Undefined variable: {var}")
-        raise
+    eval(var)
+    # try:
+    #     if var[0] == "'" or var[0].isdigit():
+    #         if var.isdigit():
+    #             return int(var)
+    #         else:
+    #             return var
+    #     elif "." in var:
+    #         fld_d,_,fld_n = var.partition('.')
+    #         if fld_d in dicts['flows'].keys():
+    #             return str(getattr(dicts['flows'][fld_d], fld_n))
+    #         else:
+    #             return dicts[fld_d][fld_n]
+    #     else:
+    #         return dicts['payload'].get(var, None)
+    # except KeyError:
+    #     print (f"Undefined variable: {var}")
+    #     raise
 
         
 
 def update_flow(pkt, fl, act):
-    assert 'exec' in act
-    assert 'pkt' in dicts, "pkt dictionary is required"
     for itm in act['exec']:
-        cmd = itm.partition('=')
-        lhs = cmd[0].partition('.')     # <flow_name>, '.', <Flow attribute>
-        rhs = cmd[2].strip()
+        exec(itm)
+        # cmd = itm.partition('=')
+        # lhs = cmd[0].partition('.')     # <flow_name>, '.', <Flow attribute>
+        # rhs = cmd[2].strip()
 
-        # if condition implementation
-        m=re.match(r'{\s*(?P<fld1>[^ :]+)\s*:\s*(?P<fld2>[^ }]+)\s*}', rhs)
-        if m :
-            flds = m.groupdict()
-        else:
-            flds = {'fld1':rhs}
+        # # if condition implementation
+        # m=re.match(r'{\s*(?P<fld1>[^ :]+)\s*:\s*(?P<fld2>[^ }]+)\s*}', rhs)
+        # if m :
+        #     flds = m.groupdict()
+        # else:
+        #     flds = {'fld1':rhs}
 
-        for i in flds.values():
-            val = flds_eval(i)
-            if val: break
+        # for i in flds.values():
+        #     val = flds_eval(i)
+        #     if val: break
     
-        if not val:
-            genlog.error(f"[!] Warning: key {flds.values()} not found")
-            raise(MyValueError)
-        else:
-            setattr(dicts['flows'][lhs[0]], lhs[2], val)
-            genlog.debug(f"set attribute: Flow['{lhs[0]}'].{lhs[2]} = {val}")
+        # if not val:
+        #     genlog.error(f"[!] Warning: key {flds.values()} not found")
+        #     raise(MyValueError)
+        # else:
+        #     setattr(globals()[lhs[0]], lhs[2], val)
+        #     genlog.debug(f"set attribute: Flow['{lhs[0]}'].{lhs[2]} = {val}")
 
 
 
@@ -344,53 +359,58 @@ def l7_verify(pkt, fl, act):
     assert isinstance(act['verify'], list), 'Verify is not a list'
     assert 'payload' in dicts, 'Payload dictionary is required'
     for itm in act['verify']:
-        cmd = re.split(r'\s*==\s*', itm)
-        assert len(cmd) <= 2
+        flds_eval (itm)
+        # cmd = re.split(r'\s*==\s*', itm)
+        # assert len(cmd) <= 2
 
-        if '.' in cmd[0]:
-            lhs = cmd[0].partition('.')
-            lhs_d,_,lhs_n = lhs
-        else:
-            lhs_d = 'payload'
-            lhs_n = cmd[0]
-        if not lhs_d in dicts:
-            genlog.error(f"[!] Error: dict '{lhs_d}' not found")
-            raise KeyError
+        # if '.' in cmd[0]:
+        #     lhs = cmd[0].partition('.')
+        #     lhs_d,_,lhs_n = lhs
+        # else:
+        #     lhs_d = 'payload'
+        #     lhs_n = cmd[0]
+        # if not lhs_d in dicts:
+        #     genlog.error(f"[!] Error: dict '{lhs_d}' not found")
+        #     raise KeyError
 
-        if dicts[lhs_d][lhs_n] != flds_get_val(cmd[1]):
-            genlog.info(f"verification failed: {lhs_d}.{lhs_n} != {flds_get_val(cmd[1])}, found:{dicts[lhs_d][lhs_n]}")
-            raise Error("Verify failed")
-        else:
-            genlog.info(f"verified: {lhs_d}.{lhs_n} == {flds_get_val(cmd[1])}")
+        # if dicts[lhs_d][lhs_n] != flds_get_val(cmd[1]):
+        #     genlog.info(f"verification failed: {lhs_d}.{lhs_n} != {flds_get_val(cmd[1])}, found:{dicts[lhs_d][lhs_n]}")
+        #     raise Error("Verify failed")
+        # else:
+        #     genlog.info(f"verified: {lhs_d}.{lhs_n} == {flds_get_val(cmd[1])}")
 
 
 def update_dicts(pkt):
-    dicts['pkt'] = {}
-    dicts['payload']={}
+    globals()['pkt'] = pkt
+    # dicts['pkt'] = {}
+    # dicts['payload']={}
 
-    if IP in pkt:
-        dicts['pkt']['src'] = pkt[IP].src
-        dicts['pkt']['dst'] = pkt[IP].src
-    if TCP in pkt:
-        dicts['pkt']['sport'] = pkt[TCP].sport
-        dicts['pkt']['dport'] = pkt[TCP].dport
-        dicts['pkt']['seq'] = pkt[TCP].seq
-    elif UDP in pkt:
-        dicts['pkt']['sport'] = pkt[UDP].sport
-        dicts['pkt']['dport'] = pkt[UDP].dport
+    # if IP in pkt:
+    #     dicts['pkt']['src'] = pkt[IP].src
+    #     dicts['pkt']['dst'] = pkt[IP].src
+    # if TCP in pkt:
+    #     dicts['pkt']['sport'] = pkt[TCP].sport
+    #     dicts['pkt']['dport'] = pkt[TCP].dport
+    #     dicts['pkt']['seq'] = pkt[TCP].seq
+    # elif UDP in pkt:
+    #     dicts['pkt']['sport'] = pkt[UDP].sport
+    #     dicts['pkt']['dport'] = pkt[UDP].dport
     if Raw in pkt:
         try:
-            dicts['payload']['len'] = len(pkt.load.decode('utf8'))
+            payload = pkt.load.decode('utf8') 
+            # dicts['payload']['len'] = len(pkt.load.decode('utf8'))
         except UnicodeDecodeError:
-            dicts['payload']['len'] = len(pkt.load)
-    else:
-        dicts['payload']['len'] = 0
+            payload = pkt.load
+            # dicts['payload']['len'] = len(pkt.load)
+        pkt[Raw].len = len(payload)
+    # else:
+    #     dicts['payload']['len'] = 0
 
 
 
 
 def do_recv(act, c):
-    fl = dicts['flows'][act['flow']]
+    fl = globals()[act['flow']]
     genlog.debug("\n{} on intf {}".format(inspect.stack()[0][3], fl.intf))
     to = act['timeout'] if 'timeout' in act else RCV_TIMEOUT
         
@@ -465,7 +485,7 @@ def ip2nxt_hop(ip):
 def create_packet(act):
     genlog.debug("{} called from {}".format(inspect.stack()[0][3],inspect.stack()[1][3]))
 
-    fl = dicts['flows'][act['flow']]
+    fl = globals()[act['flow']]
     if (fl.dst == None):
         genlog.error("[x] Error: No destination ip for {}".format(act['flow']))
         raise Error ("No destination ip for {}".format(act['flow']))
@@ -483,7 +503,7 @@ def create_packet(act):
 
     # udp/tcp
     if (fl.proto == "tcp"):
-        pkt = ip_layr/TCP(sport=int(fl.sport), dport=int(fl.dport), ack=fl.ack, seq=fl.seq, window=65535)
+        pkt = ip_layr/TCP(sport=fl.sport, dport=fl.dport, ack=fl.ack, seq=fl.seq, window=65535)
     else:
         pkt = ip_layr/UDP(sport=int(fl.sport), dport=int(fl.dport))
 
@@ -499,7 +519,6 @@ def create_packet(act):
     if 'data' in act:
         if type(act['data']) == str:
             patrn = re.compile(r'\{([^}]+)\}')
-            #a1 = patrn.sub(lambda m: flds_get_val(m.group(1)), act['data'])
             a1 = patrn.sub(lambda m: flds_eval(m.group(1)), act['data'])
             data = "".join(a1.split('\n'))
 
@@ -544,7 +563,7 @@ def do_send(act, c):
     else:
         pkt = create_packet(act)
 
-    fl = dicts['flows'][act['flow']]
+    fl = globals()[act['flow']]
     intf = ip2dev(fl.src)
 
     if TCP in pkt:
@@ -610,6 +629,21 @@ def do_loop_end(act, c):
 
 
 
+def do_save(act, c):
+    for key, val in act.items():
+        patrn = re.compile(r'\{([^}]+)\}')
+        a1 = patrn.sub(lambda m: flds_eval(m.group(1)), val) 
+        data = "".join(a1.split('\n'))
+        data = data.replace(r'\r','\r')
+        data = data.replace(r'\n','\n')
+        globals()[key] = data
+    return 1 
+
+
+def do_execute(act, c):
+    for exp in act:
+        exec(exp)
+    return c+1
 
 
 # --------------------------------------------------------------------------
@@ -622,7 +656,9 @@ actions = {
         "recv"       : do_recv,
         "create"     : do_create,
         "loop-start" : do_loop_start,
-        "loop-end"   : do_loop_end
+        "loop-end"   : do_loop_end,
+        "save"       : do_save,
+        "execute"    : do_execute
         }
 
 
@@ -724,13 +760,19 @@ def setup(scenario_f, routes_f, params_f, pcap_f):
     rcvqueue       = queue.Queue()  
     saved_pkts     = {}
 
-    dicts['flows'] = {}
+    # dicts['flows'] = {}
+    intfs = []
+    hosts = []
     for name, fl in scen_dict['flows'].items():
-        dicts['flows'].update({name:Flow(fl)})
+        flobj = Flow(fl)
+        globals()[name]= flobj
+        intfs.append(flobj.intf)
+        hosts.append(flobj.src)
+        # dicts['flows'].update({name:Flow(fl)})
 
     fname          = pcap_f
-    intfs = { fl.intf for fl in dicts['flows'].values() }
-    hosts = { fl.src for fl in dicts['flows'].values() }
+    # intfs = { fl.intf for fl in dicts['flows'].values() }
+    # hosts = { fl.src for fl in dicts['flows'].values() }
     fltr=' or '.join(map(lambda x: "host "+x, list(hosts)))
     sniffer = AsyncSniffer(prn=pkt_cb, filter=fltr, iface=list(intfs), store=(fname != None))
     sniffer.start()
@@ -766,16 +808,16 @@ if __name__ == '__main__':
     args=parser.parse_args()
     init(getattr(logging, args.log))
 
-    with open(args.testfile, 'r') as f:
-        dictionary = yaml.full_load(f)
+    # with open(args.testfile, 'r') as f:
+    #     dictionary = yaml.full_load(f)
 
-    with open(args.routes, 'r') as f:
-        routing = yaml.full_load(f)
+    # with open(args.routes, 'r') as f:
+    #     routing = yaml.full_load(f)
 
-    dicts = {}
-    if args.params:
-        with open(args.params, 'r') as f:
-            dicts.update(yaml.safe_load(f))
+    # dicts = {}
+    # if args.params:
+    #     with open(args.params, 'r') as f:
+    #         dicts.update(yaml.safe_load(f))
 
     if args.savepcap:
         fname_b = os.path.basename(args.testfile)
