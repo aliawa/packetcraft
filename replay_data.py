@@ -19,31 +19,11 @@ import pdb
 RCV_TIMEOUT=10 # timeout in seconds
 
 
-# def evalport(fl, port):
-#     if port in fl:
-#         return eval('fl[port]')
-#     else:
-#         return random.randint(3000,65535)
-#     if port in fl:
-#         portstr = str(fl[port])
-#         if re.match(r"\d+$", portstr):
-#             return portstr
-
-#         mch = re.search(r"random\s*\(\s*(?P<strt>\d+)+\s*-\s*(?P<endr>\d+)\s*\)", portstr)
-#         if mch:
-#             return random.randint(int(mch.group('strt')), int(mch.group('endr')))
-#         elif portstr == 'random' :
-#             return random.randint(3000,65535)
-#         else:
-#             return flds_eval(portstr)
-#     else:
-#         return random.randint(3000,65535)
-
 
 # -----------------------------------------------------------
 #                        Global Helpers
 # -----------------------------------------------------------
-def random_port(start, end):
+def random_num(start, end):
     return random.randint(int(start), int(end))
 
 def is_valid_ip(ip):
@@ -54,14 +34,14 @@ def is_valid_ip(ip):
     return True
 
 def is_valid_port(port):
-    return port >=1000 and port < 65536
+    return int(port) >=1000 and int(port) < 65536
 
 
 
 
 
 # -----------------------------------------------------------
-#                            Defines
+#                           Classes
 # -----------------------------------------------------------
 
 class Flow:
@@ -122,7 +102,7 @@ yaml.add_constructor(u'!rtp', rtp_constructor)
 
 
 # --------------------------------------------------------------------------
-#                                 ACTIONS
+#                                    Log
 # --------------------------------------------------------------------------
 
 def log_action(act, fl, pkt):
@@ -161,11 +141,11 @@ def log_action(act, fl, pkt):
 
 
 
-def do_delay(act, c):
-    log_action("delay", act['timeout'], None)
-    time.sleep(act['timeout']/1000)
-    return c+1
 
+
+# --------------------------------------------------------------------------
+#                               Internal Helpers
+# --------------------------------------------------------------------------
 
 def handle_non_ip(pkt):
     if ARP in pkt and pkt[ARP].op == 1:
@@ -267,230 +247,11 @@ def l7_match(pkt, fl, act):
 
 
 
-def l7_search(pkt, fl, act, name):
-    assert 'search' in act
-    if (Raw in pkt):
-        for itm in act['search']:
-            genlog.debug(f"search pattern:{itm}") 
-            m = re.search(itm, pkt[Raw].load.decode('utf8'))
-            if m:
-                genlog.debug("groupdict:{}".format(m.groupdict()))
-                for key,val in m.groupdict().items():
-                    genlog.debug(f"search got {key}={val}")
-                if not name:
-                    name = 'recv'
-                if not name in globals():
-                    globals()[name] = {}
-                globals()[name].update(m.groupdict())
-
-                # dicts['payload'].update(m.groupdict())
-            else:
-                genlog.warning(f"[!] Warning: search failed {itm}")
-    else:
-        genlog.warning("[!] Warning: search failed because pkt has no payload")
-
-
-def echo(pkt, fl, act):
-    assert 'echo' in act
-    print(act['echo'])
-
-
 def flds_eval(exp):
     try:
         return eval(exp)
     except:
         return exp
-
-    # mch = re.match(r"^(?P<lhs>[^\d\W]\w*(\.[^\d\W]\w*)?)?\s*(?P<op>[+*\/-]?)\s*(?P<rhs>([^\d\W]\w*\.*([^\d\W]\w*)|\d+))?", exp)
-    # if (mch):
-    #     if mch.group('op'):
-    #         lhs = mch.group('lhs')
-    #         rhs = mch.group('rhs')
-    #         if mch.group('op') == '+':
-    #             return str(int(flds_get_val(lhs)) + int(flds_get_val(rhs)))
-    #         elif mch.group('op') == '-':
-    #             return str(int(flds_get_val(lhs)) - int(flds_get_val(rhs)))
-    #         elif mch.group('op') == '/':
-    #             return str(int(flds_get_val(lhs)) / int(flds_get_val(rhs)))
-    #         elif mch.group('op') == '*':
-    #             return str(int(flds_get_val(lhs)) * int(flds_get_val(rhs)))
-    #     else:
-    #         return flds_get_val(exp)
-    # else:
-    #     raise Error(f"Bad expression {exp}")
-
-
-
-def flds_get_val(var):
-    eval(var)
-    # try:
-    #     if var[0] == "'" or var[0].isdigit():
-    #         if var.isdigit():
-    #             return int(var)
-    #         else:
-    #             return var
-    #     elif "." in var:
-    #         fld_d,_,fld_n = var.partition('.')
-    #         if fld_d in dicts['flows'].keys():
-    #             return str(getattr(dicts['flows'][fld_d], fld_n))
-    #         else:
-    #             return dicts[fld_d][fld_n]
-    #     else:
-    #         return dicts['payload'].get(var, None)
-    # except KeyError:
-    #     print (f"Undefined variable: {var}")
-    #     raise
-
-        
-
-# def update_flow(pkt, fl, act):
-#     for itm in act['exec']:
-#         exec(itm)
-        # cmd = itm.partition('=')
-        # lhs = cmd[0].partition('.')     # <flow_name>, '.', <Flow attribute>
-        # rhs = cmd[2].strip()
-
-        # # if condition implementation
-        # m=re.match(r'{\s*(?P<fld1>[^ :]+)\s*:\s*(?P<fld2>[^ }]+)\s*}', rhs)
-        # if m :
-        #     flds = m.groupdict()
-        # else:
-        #     flds = {'fld1':rhs}
-
-        # for i in flds.values():
-        #     val = flds_eval(i)
-        #     if val: break
-    
-        # if not val:
-        #     genlog.error(f"[!] Warning: key {flds.values()} not found")
-        #     raise(MyValueError)
-        # else:
-        #     setattr(globals()[lhs[0]], lhs[2], val)
-        #     genlog.debug(f"set attribute: Flow['{lhs[0]}'].{lhs[2]} = {val}")
-
-
-
-
-def l7_verify(pkt, fl, act):
-    # assert 'verify' in act
-    # assert isinstance(act['verify'], list), 'Verify is not a list'
-    # assert 'payload' in dicts, 'Payload dictionary is required'
-    for itm in act['verify']:
-        if eval(itm):
-            genlog.info(f"verification failed: {itm}")
-            raise Error("Verify failed")
-        else:
-            genlog.info(f"verified: {itm}")
-
-
-        #     genlog.info(f"verification failed: {lhs_d}.{lhs_n} != {flds_get_val(cmd[1])}, found:{dicts[lhs_d][lhs_n]}")
-        #     raise error("verify failed")
-        # else:
-        #     genlog.info(f"verified: {lhs_d}.{lhs_n} == {flds_get_val(cmd[1])}")
-        # cmd = re.split(r'\s*==\s*', itm)
-        # assert len(cmd) <= 2
-
-        # if '.' in cmd[0]:
-        #     lhs = cmd[0].partition('.')
-        #     lhs_d,_,lhs_n = lhs
-        # else:
-        #     lhs_d = 'payload'
-        #     lhs_n = cmd[0]
-        # if not lhs_d in dicts:
-        #     genlog.error(f"[!] Error: dict '{lhs_d}' not found")
-        #     raise KeyError
-
-        # if dicts[lhs_d][lhs_n] != flds_get_val(cmd[1]):
-        #     genlog.info(f"verification failed: {lhs_d}.{lhs_n} != {flds_get_val(cmd[1])}, found:{dicts[lhs_d][lhs_n]}")
-        #     raise Error("Verify failed")
-        # else:
-        #     genlog.info(f"verified: {lhs_d}.{lhs_n} == {flds_get_val(cmd[1])}")
-
-
-# def update_dicts(pkt):
-#     globals()['pkt'] = pkt
-    # dicts['pkt'] = {}
-    # dicts['payload']={}
-
-    # if IP in pkt:
-    #     dicts['pkt']['src'] = pkt[IP].src
-    #     dicts['pkt']['dst'] = pkt[IP].src
-    # if TCP in pkt:
-    #     dicts['pkt']['sport'] = pkt[TCP].sport
-    #     dicts['pkt']['dport'] = pkt[TCP].dport
-    #     dicts['pkt']['seq'] = pkt[TCP].seq
-    # elif UDP in pkt:
-    #     dicts['pkt']['sport'] = pkt[UDP].sport
-    #     dicts['pkt']['dport'] = pkt[UDP].dport
-    if Raw in pkt:
-        try:
-            payload = pkt.load.decode('utf8') 
-            # dicts['payload']['len'] = len(pkt.load.decode('utf8'))
-        except UnicodeDecodeError:
-            payload = pkt.load
-            # dicts['payload']['len'] = len(pkt.load)
-        pkt[Raw].len = len(payload)
-    # else:
-    #     dicts['payload']['len'] = 0
-
-
-
-
-def do_recv(act, c):
-    fl = globals()[act['flow']]
-    genlog.debug("\n{} on intf {}".format(inspect.stack()[0][3], fl.intf))
-    to = act['timeout'] if 'timeout' in act else RCV_TIMEOUT
-        
-
-    while True:
-        try:
-            pkt = rcvqueue.get(block=True, timeout=to)
-        except queue.Empty:
-            genlog.critical ("receive failed")
-            raise Error("receive timeout")
-
-        if l3_l4_match(pkt, fl, act) == True:
-            if "l7-proto" in act:
-                if act["l7-proto"] == "RTP":
-                    pkt[UDP].decode_payload_as(RTP)
-
-            log_action("recv", act['flow'], pkt)
-            update_l3_l4(fl,pkt)
-        else:
-            continue
-
-
-        if 'match' in act: 
-            if l7_match(pkt, fl, act):
-                genlog.info(f"match success: '{act['match']}'")
-            else:
-                continue
-
-        # update_dicts(pkt)
-        globals()['pkt'] = pkt
-
-
-        name=None
-        if ("name" in act):
-            name=act['name']
-        if ("echo" in act):
-            echo(pkt, fl, act)
-        if ("search" in act):
-            l7_search(pkt, fl, act, name)
-        if "exec" in act:
-            for itm in act['exec']:
-                exec(itm)
-        if "verify" in act:
-            l7_verify(act, fl, act)
-
-
-        unknown_a = [ a for a in act.keys() if a not in ['flow','search','verify','exec','flags','match','echo','l7-proto']]
-        for x in unknown_a:
-            genlog.warning(f"WARNING: Unknown action:{x}")
-
-        return c+1
-
-
 
 
 def ip2mac(ip):
@@ -550,15 +311,15 @@ def create_packet(act):
     # Raw
     if 'data' in act:
         if type(act['data']) == str:
-            patrn = re.compile(r'\{([^}]+)\}')
-            a1 = patrn.sub(lambda m: str(flds_eval(m.group(1))), act['data'])
-            data = "".join(a1.split('\n'))
 
-            # replace literal \r\n 
+            data = "".join(act['data'].split('\n'))
             data = data.replace(r'\r','\r')
             data = data.replace(r'\n','\n')
-            pkt = pkt/data
-            genlog.debug(f"payload size: {len(data)}")
+
+            patrn = re.compile(r'\{([^}]+)\}')
+            payload = patrn.sub(lambda m: str(flds_eval(m.group(1))), data)
+            pkt = pkt/payload
+            genlog.debug(f"payload size: {len(payload)}")
 
             if pkt.haslayer(TCP):
                 pkt[TCP].flags='PA'
@@ -586,6 +347,112 @@ def create_packet(act):
 
     return pkt
 
+
+# -----------------------------------------------------------
+#                         Sub Actions
+# -----------------------------------------------------------
+
+def echo(pkt, fl, act):
+    assert 'echo' in act
+    print(act['echo'])
+
+
+def l7_search(pkt, fl, act, name):
+    assert 'search' in act
+    if (Raw in pkt):
+        for itm in act['search']:
+            genlog.debug(f"search pattern:{itm}") 
+            m = re.search(itm, pkt[Raw].load.decode('utf8'))
+            if m:
+                genlog.debug("groupdict:{}".format(m.groupdict()))
+                for key,val in m.groupdict().items():
+                    genlog.debug(f"search got {key}={val}")
+                if not name:
+                    name = 'recv'
+                if not name in globals():
+                    globals()[name] = {}
+                globals()[name].update(m.groupdict())
+
+                # dicts['payload'].update(m.groupdict())
+            else:
+                genlog.warning(f"[!] Warning: search failed {itm}")
+    else:
+        genlog.warning("[!] Warning: search failed because pkt has no payload")
+
+
+def l7_verify(pkt, fl, act):
+    for itm in act['verify']:
+        if not eval(itm):
+            genlog.info(f"verification failed: {itm}")
+            raise Error("Verify failed")
+        else:
+            genlog.info(f"verified: {itm}")
+
+
+
+
+# -----------------------------------------------------------
+#                          Actions
+# -----------------------------------------------------------
+
+def do_delay(act, c):
+    log_action("delay", act['timeout'], None)
+    time.sleep(act['timeout']/1000)
+    return c+1
+
+
+
+def do_recv(act, c):
+    fl = globals()[act['flow']]
+    genlog.debug("\n{} on intf {}".format(inspect.stack()[0][3], fl.intf))
+    to = act['timeout'] if 'timeout' in act else RCV_TIMEOUT
+        
+
+    while True:
+        try:
+            pkt = rcvqueue.get(block=True, timeout=to)
+        except queue.Empty:
+            genlog.critical ("receive failed")
+            raise Error("receive timeout")
+
+        if l3_l4_match(pkt, fl, act) == True:
+            if "l7-proto" in act:
+                if act["l7-proto"] == "RTP":
+                    pkt[UDP].decode_payload_as(RTP)
+
+            log_action("recv", act['flow'], pkt)
+            update_l3_l4(fl,pkt)
+        else:
+            continue
+
+
+        if 'match' in act: 
+            if l7_match(pkt, fl, act):
+                genlog.info(f"match success: '{act['match']}'")
+            else:
+                continue
+
+        globals()['pkt'] = pkt
+
+        name=None
+        if ("name" in act):
+            name=act['name']
+        if ("echo" in act):
+            echo(pkt, fl, act)
+        if ("search" in act):
+            l7_search(pkt, fl, act, name)
+        if "exec" in act:
+            for itm in act['exec']:
+                exec(itm)
+        if "verify" in act:
+            l7_verify(act, fl, act)
+
+
+        unknown_a = [ a for a in act.keys() if a not in ['flow','search','verify','exec','flags','match','echo','l7-proto']]
+        for x in unknown_a:
+            genlog.warning(f"WARNING: Unknown action:{x}")
+
+        return c+1
 
 def do_send(act, c):
     genlog.debug("\n{} called from {}".format(inspect.stack()[0][3],inspect.stack()[1][3]))
@@ -663,13 +530,15 @@ def do_loop_end(act, c):
 
 def do_save(act, c):
     for key, val in act.items():
-        patrn = re.compile(r'\{([^}]+)\}')
-        a1 = patrn.sub(lambda m: flds_eval(m.group(1)), val) 
-        data = "".join(a1.split('\n'))
+        data = "".join(val.split('\n'))
         data = data.replace(r'\r','\r')
         data = data.replace(r'\n','\n')
-        globals()[key] = data
-    return 1 
+
+        patrn = re.compile(r'\{([^}]+)\}')
+        payload = patrn.sub(lambda m: flds_eval(m.group(1)), data) 
+        globals()[key] = payload
+    return c+1 
+
 
 
 def do_execute(act, c):
@@ -785,7 +654,6 @@ def setup(scenario_f, routes_f, params_f, pcap_f):
     with open(routes_f, 'r') as f:
         routing = yaml.safe_load(f)
 
-    # dicts = {}
     if params_f:
         with open(params_f, 'r') as f:
             if not 'params' in globals():
@@ -795,7 +663,6 @@ def setup(scenario_f, routes_f, params_f, pcap_f):
     rcvqueue       = queue.Queue()  
     saved_pkts     = {}
 
-    # dicts['flows'] = {}
     intfs = []
     hosts = []
     for name, fl in scen_dict['flows'].items():
@@ -803,11 +670,8 @@ def setup(scenario_f, routes_f, params_f, pcap_f):
         globals()[name]= flobj
         intfs.append(flobj.intf)
         hosts.append(flobj.src)
-        # dicts['flows'].update({name:Flow(fl)})
 
-    fname          = pcap_f
-    # intfs = { fl.intf for fl in dicts['flows'].values() }
-    # hosts = { fl.src for fl in dicts['flows'].values() }
+    fname = pcap_f
     fltr=' or '.join(map(lambda x: "host "+x, list(hosts)))
     sniffer = AsyncSniffer(prn=pkt_cb, filter=fltr, iface=list(intfs), store=(fname != None))
     sniffer.start()
@@ -843,23 +707,11 @@ if __name__ == '__main__':
     args=parser.parse_args()
     init(getattr(logging, args.log))
 
-    # with open(args.testfile, 'r') as f:
-    #     dictionary = yaml.full_load(f)
-
-    # with open(args.routes, 'r') as f:
-    #     routing = yaml.full_load(f)
-
-    # dicts = {}
-    # if args.params:
-    #     with open(args.params, 'r') as f:
-    #         dicts.update(yaml.safe_load(f))
-
     if args.savepcap:
         fname_b = os.path.basename(args.testfile)
         fname = os.path.splitext(fname_b)[0] + "_send.pcap"
     else:
         fname = None
-
 
     try:
         scenario = setup(args.testfile, args.routes, args.params, fname)
@@ -867,19 +719,19 @@ if __name__ == '__main__':
         genlog.critical ("KeyError: {}".format(inst))
         exit()
        
-    # try:
-    time.sleep(3)
-    run_scenario(scenario)
-    # except KeyError as inst:
-    #     genlog.critical ("KeyError: {}".format(inst))
-    # except Error as err:
-    #     genlog.critical ("Error: {}".format(err))
-    # except MyValueError:
-    #     genlog.critical ("[x] Test failed because a required field is missing in the message")
-    # except ValueError:
-    #     print(traceback.format_exc())
-    # finally:
-    #     stop()
+    try:
+        time.sleep(3)
+        run_scenario(scenario)
+    except KeyError as inst:
+        genlog.critical ("KeyError: {}".format(inst))
+    except Error as err:
+        genlog.critical ("Error: {}".format(err))
+    except MyValueError:
+        genlog.critical ("[x] Test failed because a required field is missing in the message")
+    except ValueError:
+        print(traceback.format_exc())
+    finally:
+        stop()
 
 
 
