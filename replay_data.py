@@ -234,7 +234,7 @@ def l7_match(pkt, fl, act):
     assert 'match' in act
     if (Raw in pkt):
         patrn = re.compile(r'\{([A-Za-z][^}]+)\}')
-        a1 = patrn.sub(lambda m: flds_get_val(m.group(1)), act['match'])
+        a1 = patrn.sub(lambda m: flds_eval(m.group(1)), act['match'])
         genlog.debug(f"match string: '{a1}'")
         if (not re.match(a1, pkt[Raw].load.decode('utf8'))):
             genlog.warning("match '{}' failed in '{}'".format(a1, pkt[Raw].load.decode('utf8')))
@@ -323,7 +323,7 @@ def create_packet(act):
 
             if pkt.haslayer(TCP):
                 pkt[TCP].flags='PA'
-                fl.seq+=len(data)
+                fl.seq+=len(payload)
 
         elif type(act['data']) == bytes:
             pkt = pkt/act['data']
@@ -535,7 +535,7 @@ def do_save(act, c):
         data = data.replace(r'\n','\n')
 
         patrn = re.compile(r'\{([^}]+)\}')
-        payload = patrn.sub(lambda m: flds_eval(m.group(1)), data) 
+        payload = patrn.sub(lambda m: str(flds_eval(m.group(1))), data) 
         globals()[key] = payload
     return c+1 
 

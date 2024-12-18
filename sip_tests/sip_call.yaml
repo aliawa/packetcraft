@@ -13,7 +13,7 @@ flows:
 
   'c2s':
     src: 192.168.1.49
-    sport: 5060
+    sport: 'random_num(5000, 7000)'
     dst: s2c.src
     dport: s2c.sport
 
@@ -22,10 +22,10 @@ flows:
     sport: 5070
   'c2s_rtp':
     src: 192.168.1.49
-    sport: 16384
+    sport: 'random_num(16000, 20000)'
   's2c_rtp':
     src: 10.1.1.49
-    sport: 27254
+    sport: 'random_num(16000, 20000)'
   's2c_rtcp':
     src: s2c_rtp.src
     sport: s2c_rtp.sport + 1
@@ -70,18 +70,18 @@ scenario:
     - c=IN IP4 (?P<rtp_dst>.*)\r\n
     - m=audio (?P<rtp_dport>\d+)
     exec:
-    - s2c_rtp.dst=rtp_dst
-    - s2c_rtp.dport=rtp_dport
-    - s2c.dst=client_ip
-    - s2c.dport=client_port
+    - s2c_rtp.dst=recv['rtp_dst']
+    - s2c_rtp.dport=recv['rtp_dport']
+    - s2c.dst=recv['client_ip']
+    - s2c.dport=recv['client_port']
 
 - send:
     flow: s2c
     data: |-
         SIP/2.0 200 OK\r\n
-        Via: {via}\r\n
-        From: {from}\r\n
-        To: {to};tag=SERVER-4FE052EC\r\n
+        Via: {recv['via']}\r\n
+        From: {recv['from']}\r\n
+        To: {recv['to']};tag=SERVER-4FE052EC\r\n
         Call-ID: 5a2fb8b1-3c6d8673-82af160a@{c2s.src}00\r\n
         CSeq: 1 INVITE\r\n
         Contact: <sip:9200014@{s2c_contact.src}:{s2c_contact.sport}>\r\n
@@ -107,12 +107,12 @@ scenario:
     - c=IN IP4 (?P<rtp_dst>.*)\r\n
     - m=audio (?P<rtp_dport>\d+)
     exec:
-    - c2s_rtp.dst=rtp_dst
-    - c2s_rtp.dport=rtp_dport
-    - c2s_rtcp.dst=rtp_dst
-    - c2s_rtcp.dport=rtp_dport + 1
-    - c2s.dst=contact_ip
-    - c2s.dport=contact_port
+    - c2s_rtp.dst=recv['rtp_dst']
+    - c2s_rtp.dport=recv['rtp_dport']
+    - c2s_rtcp.dst=recv['rtp_dst']
+    - c2s_rtcp.dport=int(recv['rtp_dport']) + 1
+    - c2s.dst=recv['contact_ip']
+    - c2s.dport=recv['contact_port']
 
 - send: 
     flow: c2s
