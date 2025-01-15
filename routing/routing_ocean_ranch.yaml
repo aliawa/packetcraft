@@ -1,0 +1,16 @@
+# next-hop and egress interface for each source ip
+'routing':
+  '192.168.60.0/24':
+      next-hop: b4:0c:25:e0:40:10 
+      dev: bond0
+  '192.168.61.0/24':
+      next-hop: b4:0c:25:e0:40:11
+      dev: bond0
+
+
+# Local interfaces and their mac addresses
+'interfaces':
+  'ens192': 00:50:56:9c:8f:33
+  'ens224': 00:50:56:9c:19:13
+  'ens256': 00:50:56:9c:0b:ff
+    

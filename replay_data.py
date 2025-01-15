@@ -255,7 +255,7 @@ def flds_eval(exp):
 
 
 def ip2mac(ip):
-    return routing['interfaces'][ip2dev(ip)]
+    return get_if_hwaddr(ip2dev(ip))
 
 
 def ip2dev(ip):
@@ -405,7 +405,7 @@ def do_delay(act, c):
 def do_recv(act, c):
     fl = globals()[act['flow']]
     genlog.debug("\n{} on intf {}".format(inspect.stack()[0][3], fl.intf))
-    to = act['timeout'] if 'timeout' in act else RCV_TIMEOUT
+    to = eval(act['timeout']) if 'timeout' in act else RCV_TIMEOUT
         
 
     while True:
