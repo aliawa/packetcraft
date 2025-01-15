@@ -361,3 +361,16 @@ Global variables
     - pkt
     - pkt[Raw].len is available
 
+recv action:
+    if a "name: <name>" is provided then search fields can be accessed as
+        <name>.<field_name>
+    otherwise search fields will be accessed as recv.<field_name>
+
+The global 'pkt' always points to last received packet
+
+Helper functions:
+    random(a, b)     # returns random number N such that a <= N <= b
+    is_valid_ip4(string)
+    is_valid_port(int)
+
+
