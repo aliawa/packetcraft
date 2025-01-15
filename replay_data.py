@@ -423,6 +423,7 @@ def do_recv(act, c):
             log_action("recv", act['flow'], pkt)
             update_l3_l4(fl,pkt)
         else:
+            rcvqueue.task_done()
             continue
 
 
@@ -430,6 +431,7 @@ def do_recv(act, c):
             if l7_match(pkt, fl, act):
                 genlog.info(f"match success: '{act['match']}'")
             else:
+                rcvqueue.task_done()
                 continue
 
         globals()['pkt'] = pkt
@@ -448,10 +450,11 @@ def do_recv(act, c):
             l7_verify(act, fl, act)
 
 
-        unknown_a = [ a for a in act.keys() if a not in ['flow','search','verify','exec','flags','match','echo','l7-proto']]
+        unknown_a = [ a for a in act.keys() if a not in ['flow','search','verify','exec','flags','match','echo','l7-proto','timeout']]
         for x in unknown_a:
             genlog.warning(f"WARNING: Unknown action:{x}")
 
+        rcvqueue.task_done()
         return c+1
 
 def do_send(act, c):
@@ -663,13 +666,13 @@ def setup(scenario_f, routes_f, params_f, pcap_f):
     rcvqueue       = queue.Queue()  
     saved_pkts     = {}
 
-    intfs = []
-    hosts = []
+    intfs = set()
+    hosts = set()
     for name, fl in scen_dict['flows'].items():
         flobj = Flow(fl)
         globals()[name]= flobj
-        intfs.append(flobj.intf)
-        hosts.append(flobj.src)
+        intfs.add(flobj.intf)
+        hosts.add(flobj.src)
 
     fname = pcap_f
     fltr=' or '.join(map(lambda x: "host "+x, list(hosts)))

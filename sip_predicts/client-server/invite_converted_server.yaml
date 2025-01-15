@@ -19,31 +19,10 @@ flows:
     sport: s2c.sport + 20
   s2c_rtp:
     src: s2c.src
-    sport: 28000
+    sport: 'random_num(20000,40000)'
   s2c_rtcp:
     src: s2c.src
-    sport: 28001
-
-  c2s:
-    proto: udp
-    src: '192.168.60.212'
-    sport: 6060 
-    dst: s2c.src
-    dport: s2c.sport
-  c2s_via:
-    proto: udp
-    src: c2s.src
-    sport: c2s.sport + 10
-  c2s_contact:
-    proto: udp
-    src: c2s.src
-    sport: c2s.sport + 20
-  c2s_rtp:
-    src: c2s.src
-    sport: c2s.sport * 5 
-  c2s_rtcp:
-    src: c2s.src
-    sport: c2s_rtp.sport + 1
+    sport: 's2c_rtp.sport+1'
 
 scenario:
 - recv:
@@ -69,6 +48,7 @@ scenario:
     - s2c_rtcp.dport=int(recv['rtp_dport'])+1
 
       # directed to via predict
+      
 - send:
     flow: s2c
     data: |-
@@ -92,6 +72,10 @@ scenario:
         a=rtpmap:0 pcmu/8000\r\n
         a=rtpmap:101 telephone-event/8000\r\n
         a=fmtp:101 0-15\r\n
+
+- recv:
+    flow: s2c
+    match: 'ACK'
 
 - send:
     flow: s2c_contact
