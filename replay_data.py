@@ -250,26 +250,7 @@ def echo(pkt, fl, act):
 
 
 def flds_eval(exp):
-    if re.match(r"\d+", exp):
-        return exp
-
-    mch = re.match(r"^(?P<lhs>[^\d\W]\w*(\.[^\d\W]\w*)?)?\s*(?P<op>[+*\/-]?)\s*(?P<rhs>([^\d\W]\w*\.*([^\d\W]\w*)|\d+))?", exp)
-    if (mch):
-        if mch.group('op'):
-            lhs = mch.group('lhs')
-            rhs = mch.group('rhs')
-            if mch.group('op') == '+':
-                return str(int(flds_get_val(lhs)) + int(flds_get_val(rhs)))
-            elif mch.group('op') == '-':
-                return str(int(flds_get_val(lhs)) - int(flds_get_val(rhs)))
-            elif mch.group('op') == '/':
-                return str(int(flds_get_val(lhs)) / int(flds_get_val(rhs)))
-            elif mch.group('op') == '*':
-                return str(int(flds_get_val(lhs)) * int(flds_get_val(rhs)))
-        else:
-            return flds_get_val(exp)
-    else:
-        raise Error(f"Bad expression {exp}")
+    return eval(exp)
 
 
 

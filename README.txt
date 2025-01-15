@@ -126,6 +126,7 @@ Commands
 - recv:
     Add a recv action even if no data needs to be extracted to update the ACK
     counter
+    timeout: timeout in seconds or 'None' if need to wait indefinetly
 
 
 - create:
