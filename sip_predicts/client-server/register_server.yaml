@@ -1,0 +1,46 @@
+# c2s --> REGISTER creates 2 predict 
+#   via <== 200 OK
+#   contact <==  future call
+
+flows:
+  s2c:
+    proto: udp
+    src: 192.168.61.213
+    sport: 5060
+
+
+scenario: 
+-recv:
+    flow: 's2c'
+    timeout: 'None'
+    match: 'REGISTER sip'
+    search:
+    - 'Via: (?P<via>.*)\r\n'
+    - 'Via: SIP/2.0/UDP (?P<client_ip>[\d.]+):(?P<client_port>\d+);'
+    - 'From: (?P<from>.*)\r\n'
+    - 'To: (?P<to>.*)\r\n'
+    - 'Call-ID: (?<call_id>.*)\r\n
+    - 'Contact: <sip:[0-9]+@(?P<contact_ip>[\d.]+):(?P<contact_port>\d+)>'
+    exec:
+    - s2c.dst=recv['client_ip']
+    - s2c.dport=recv['client_port']
+
+
+- send:
+    flow: 's2c'
+    data: |-
+      SIP/2.0 200 OK\r\n
+      Via: {recv['via']}\r\n
+      From: {recv['from']}\r\n
+      To: {recv['to']}
+      Call-ID: {recv['call_id']}\r\n
+      CSeq: 1 REGISTER\r\n
+      Contact: <sip:7405557012@{recv['contact_ip}:{contact_port}>\r\n
+      User-agent: PAN-sip-tester
+      Supported: 100rel\r\n
+      Max-forwards: 70\r\n
+      Expires: 3600\r\n
+      Content-Length: 0\r\n
+      \r\n
+
+

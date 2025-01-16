@@ -1,0 +1,45 @@
+# c2s --> REGISTER creates 2 predict 
+#   via <== 200 OK
+#   contact <==  future call
+
+flows:
+  s2c:
+    proto: udp
+    src: 192.168.61.213
+    sport: 5060
+
+  c2s:
+    proto: udp
+    src: 192.168.60.212
+    sport: 'random_num(6000,9000)'
+    dst: s2c.src
+    dport: s2c.sport
+  c2s_contact:
+    proto: udp
+    src: c2s.src
+    sport: c2s.sport + 20
+
+
+scenario: 
+- send:
+    flow: 'c2s'
+    data: |-
+      REGISTER sip:7405557000@{s2c.dst}:{s2c.dport};user=phone SIP/2.0\r\n
+      Via: SIP/2.0/UDP {c2s.src}:{c2s.sport};branch=z9hG4bKbe15632f914B3568\r\n
+      From: "7012" <sip:7405557012@sipdomain.org>;tag=BA76D475-4FE052EC\r\n
+      To: <sip:7405557000@sipdomain.org;user=phone>\r\n
+      Call-ID: 5a2fb8b1-3c6d8673-82af160a@192.168.1.100\r\n
+      CSeq: 1 REGISTER\r\n
+      Contact: <sip:7405557012@{c2s_contact.src}:{c2s_contact.sport>\r\n
+      User-agent: PAN-sip-tester
+      Supported: 100rel\r\n
+      Max-forwards: 70\r\n
+      Content-Length: 0\r\n
+      \r\n
+
+
+- recv:
+    flow: c2s
+    match: '200 OK'
+
+
