@@ -17,12 +17,6 @@ flows:
     proto: udp
     src: s2c.src
     sport: s2c.sport + 20
-    #  s2c_rtp:
-    #    src: s2c.src
-    #    sport: 28000
-    #  s2c_rtcp:
-    #    src: s2c.src
-    #    sport: 28001
 
   c2s:
     proto: udp
@@ -74,6 +68,7 @@ scenario:
       \r\n
 
 
+# hits invite via predict
 - recv:
     flow: c2s_via
     match: 'SIP/2.0 200 OK'
@@ -90,8 +85,9 @@ scenario:
     - c2s_contact.dst=recv['contact_ip']
 
 
+# directed to 200 contact predict
 - send:
-    flow: c2s
+    flow: c2s_contact
     data: |-
       ACK sip:7405557000@{c2s.dst}:{c2s.dport};user=phone SIP/2.0\r\n
       Via: SIP/2.0/UDP {c2s_via.src}:{c2s_via.sport};branch=z9hG4bKbe15632f914B3568\r\n
