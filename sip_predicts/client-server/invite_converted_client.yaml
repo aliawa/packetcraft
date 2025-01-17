@@ -7,8 +7,8 @@
 flows:
   s2c:
     proto: udp
-    src: 192.168.61.213
-    sport: 5060
+    src: 192.168.60.212
+    sport: 5566
   s2c_via:
     proto: udp
     src: s2c.src
@@ -20,8 +20,8 @@ flows:
 
   c2s:
     proto: udp
-    src: 192.168.60.212
-    sport: 'random_num(6000,9000)'
+    src: 192.168.61.213
+    sport: 5060
     dst: s2c.src
     dport: s2c.sport
   c2s_via:
