@@ -287,7 +287,7 @@ def create_packet(act):
         raise Error ("No destination port for {}".format(act['flow']))
 
     # Ether/IP
-    ip_layr = Ether(src=fl.src_mac, dst=(ip2nxt_hop(fl.src))) / IP(src=fl.src,dst=fl.dst) 
+    ip_layr = Ether(src=fl.src_mac, dst=(ip2nxt_hop(fl.dst))) / IP(src=fl.src,dst=fl.dst) 
     ip_layr[IP].id = fl.ipid
     fl.ipid += 1
     if hasattr(fl, 'tos'):
