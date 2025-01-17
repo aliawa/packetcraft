@@ -19,7 +19,7 @@ scenario:
     - 'Via: SIP/2.0/UDP (?P<client_ip>[\d.]+):(?P<client_port>\d+);'
     - 'From: (?P<from>.*)\r\n'
     - 'To: (?P<to>.*)\r\n'
-    - 'Call-ID: (?<call_id>.*)\r\n'
+    - 'Call-ID: (?P<call_id>.*)\r\n'
     - 'Contact: <sip:[0-9]+@(?P<contact_ip>[\d.]+):(?P<contact_port>\d+)>'
     exec:
     - s2c.dst=recv['client_ip']
@@ -35,7 +35,7 @@ scenario:
       To: {recv['to']}
       Call-ID: {recv['call_id']}\r\n
       CSeq: 1 REGISTER\r\n
-      Contact: <sip:7405557012@{recv['contact_ip}:{contact_port}>\r\n
+      Contact: <sip:7405557012@{recv['contact_ip']}:{recv['contact_port']}>\r\n
       User-agent: PAN-sip-tester
       Supported: 100rel\r\n
       Max-forwards: 70\r\n
