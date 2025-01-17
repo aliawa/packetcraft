@@ -18,7 +18,7 @@ flows:
   c2s_contact:
     proto: udp
     src: c2s.src
-    sport: c2s.sport + 20
+    sport: 5566
 
 
 scenario: 
