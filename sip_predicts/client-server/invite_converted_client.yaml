@@ -7,18 +7,8 @@
 flows:
   s2c:
     proto: udp
-    #src: 192.168.60.112
-    src: 192.168.70.220
-    sport: 65391
-    #sport: 5566
-  s2c_via:
-    proto: udp
-    src: s2c.src
-    sport: s2c.sport + 10
-  s2c_contact:
-    proto: udp
-    src: s2c.src
-    sport: s2c.sport + 20
+    src: params['s2c_src']
+    sport: params['s2c_port']
 
   c2s:
     proto: udp

@@ -117,6 +117,8 @@ def log_action(act, fl, pkt):
         prefix = "<----"
     elif act == 'create':
         prefix = "-----"
+    elif act == 'wait':
+        prefix = "....."
 
     s = "{} [{}]".format(act, fl)
     if (RTP in pkt):
@@ -406,7 +408,9 @@ def do_recv(act, c):
     fl = globals()[act['flow']]
     genlog.debug("\n{} on intf {}".format(inspect.stack()[0][3], fl.intf))
     to = eval(act['timeout']) if 'timeout' in act else RCV_TIMEOUT
-        
+    
+    if c == 0:
+        print (f"\nlistning on {fl.sport} ...")
 
     while True:
         try:
