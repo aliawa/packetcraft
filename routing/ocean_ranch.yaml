@@ -1,6 +1,7 @@
 # next-hop and egress interface for each source ip
 'routing':
   '192.168.60.0/24':
+  '192.168.70.0/24':
       next-hop: b4:0c:25:e0:40:11
       dev: bond0
   '192.168.61.0/24':
