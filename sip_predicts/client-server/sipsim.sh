@@ -1,4 +1,4 @@
-DIR=$HOME/packetcraft
+DIR=$HOME/aliawa/packetcraft
 TMP=$HOME/tmp
 
 
@@ -16,5 +16,13 @@ case $1 in
         ;;
     register_server)
         sudo python3 $DIR/replay_data.py -r $DIR/routing/ocean_ranch.yaml -s -t $DIR/sip_predicts/client-server/register_server.yaml -l INFO
+        ;;
+    *) echo 
+        echo "Usage:"
+        echo "  invite_server"
+        echo "  invite_client <port>"
+        echo "  register_client"
+        echo "  register_server"
+        echo 
         ;;
 esac
