@@ -158,8 +158,8 @@ def handle_non_ip(pkt):
             genlog.debug(f"generate arp reply for {pkt.pdst} mac {mac} telling {pkt.psrc}")
             arp_reply = Ether(src=mac, dst="ff:ff:ff:ff:ff:ff")/ARP(op="is-at", hwsrc=mac, psrc=pkt.pdst, hwdst="ff:ff:ff:ff:ff:ff", pdst=pkt.psrc)
             sendp(arp_reply, iface=ip2dev(pkt.pdst))
-        except Error:
-            genlog.debug("Error: non IP packet parsing")
+        except:
+            genlog.debug("Ignore ARP who-is")
             pass
     else:
         genlog.debug("non IP packet: ignoring")
