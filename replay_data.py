@@ -11,6 +11,7 @@ import inspect
 import string
 from scapy.all import *
 import pdb
+from enum import Enum
 
 
 # -----------------------------------------------------------
@@ -18,6 +19,9 @@ import pdb
 # -----------------------------------------------------------
 RCV_TIMEOUT=10 # timeout in seconds
 
+class Routing(Enum):
+    source = 1
+    dest = 2
 
 
 # -----------------------------------------------------------
@@ -117,8 +121,6 @@ def log_action(act, fl, pkt):
         prefix = "<----"
     elif act == 'create':
         prefix = "-----"
-    elif act == 'wait':
-        prefix = "....."
 
     s = "{} [{}]".format(act, fl)
     if (RTP in pkt):
@@ -256,16 +258,14 @@ def flds_eval(exp):
         return exp
 
 
+def ip2dev(ip):
+    return ip2dev_tbl[ip]
+
+
+# what is the mac addr of interface that has this ip
 def ip2mac(ip):
     return get_if_hwaddr(ip2dev(ip))
 
-
-def ip2dev(ip):
-    ipadr = ipaddress.ip_address(ip)
-    for net in routing['routing']:
-        if ipadr in ipaddress.ip_network(net):
-            return routing['routing'][net]['dev']
-    raise Error (f"No outgoing interface for {ip}")
 
 
 def ip2nxt_hop(ip):
@@ -289,7 +289,11 @@ def create_packet(act):
         raise Error ("No destination port for {}".format(act['flow']))
 
     # Ether/IP
-    ip_layr = Ether(src=fl.src_mac, dst=(ip2nxt_hop(fl.dst))) / IP(src=fl.src,dst=fl.dst) 
+    if routing_type == Routing.source:
+        ip_layr = Ether(src=fl.src_mac, dst=(ip2nxt_hop(fl.src))) / IP(src=fl.src,dst=fl.dst) 
+    else: 
+        ip_layr = Ether(src=fl.src_mac, dst=(ip2nxt_hop(fl.dst))) / IP(src=fl.src,dst=fl.dst) 
+
     ip_layr[IP].id = fl.ipid
     fl.ipid += 1
     if hasattr(fl, 'tos'):
@@ -410,7 +414,7 @@ def do_recv(act, c):
     to = eval(act['timeout']) if 'timeout' in act else RCV_TIMEOUT
     
     if c == 0:
-        print (f"\nlistning on {fl.sport} ...")
+        print (f"\nListning on {fl.sport} ...")
 
     while True:
         try:
@@ -427,7 +431,6 @@ def do_recv(act, c):
             log_action("recv", act['flow'], pkt)
             update_l3_l4(fl,pkt)
         else:
-            rcvqueue.task_done()
             continue
 
 
@@ -435,7 +438,6 @@ def do_recv(act, c):
             if l7_match(pkt, fl, act):
                 genlog.info(f"match success: '{act['match']}'")
             else:
-                rcvqueue.task_done()
                 continue
 
         globals()['pkt'] = pkt
@@ -458,7 +460,6 @@ def do_recv(act, c):
         for x in unknown_a:
             genlog.warning(f"WARNING: Unknown action:{x}")
 
-        rcvqueue.task_done()
         return c+1
 
 def do_send(act, c):
@@ -645,21 +646,29 @@ def setup_logging(log_level):
 def init(logl):
     setup_logging(logl)
 
-def setup(scenario_f, routes_f, params_f, pcap_f):
+def setup(scenario_f, routes_f, route_type, params_f, pcap_f):
     # global dicts
     global routing
+    global routing_type
     global scenario
     global saved_pkts
     global fname
     global sniffer
     global rcvqueue
     global recv          # last received packet
+    global ip2dev_tbl
 
     with open(scenario_f, 'r') as f:
         scen_dict = yaml.full_load(f)
 
+    # routing
+    routing_type = route_type
+    ip2dev_tbl = dict()
     with open(routes_f, 'r') as f:
         routing = yaml.safe_load(f)
+        for dev_name, ips in routing['interfaces'].items():
+            for x in ips:
+                ip2dev_tbl[x] = dev_name
 
     if params_f:
         with open(params_f, 'r') as f:
@@ -702,10 +711,15 @@ def stop():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(formatter_class=lambda prog: argparse.HelpFormatter(prog,max_help_position=57))
     parser.add_argument('-t', '--testfile', metavar='', help='testfile name .yaml', required=True, )
-    parser.add_argument('-r', '--routes',   metavar='', help='routing file .yaml', required=True)
     parser.add_argument('-l', '--log',      metavar='', choices=['DEBUG','INFO','WARNING','ERROR','CRITICAL'], help='Set logging level {%(choices)s}', default='CRITICAL')
     parser.add_argument('-p', '--params',   metavar='', help='parameter file')
     parser.add_argument('-s', '--savepcap', action='store_true', help='save pcap file')
+
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('-sr', '--src_routes', help='source based routing file .yaml')
+    group.add_argument('-dr', '--dst_routes', help='destination based routing file .yaml')
+
+    args = parser.parse_args()
 
     # This is needed otherwise packet will appear twice in pcap
     conf.sniff_promisc=0
@@ -721,7 +735,11 @@ if __name__ == '__main__':
         fname = None
 
     try:
-        scenario = setup(args.testfile, args.routes, args.params, fname)
+        if args.src_routes:
+            scenario = setup(args.testfile, args.src_routes, Routing.source, args.params, fname)
+        else:
+            scenario = setup(args.testfile, args.dst_routes, Routing.dest, args.params, fname)
+        
     except KeyError as inst:
         genlog.critical ("KeyError: {}".format(inst))
         exit()

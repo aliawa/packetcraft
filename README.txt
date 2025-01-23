@@ -194,10 +194,20 @@ Commands
     echo: "blah blah"
 
 
--save
-  body: |
-    v=0\r\n
-    o=user1 53655765 2353687637 IN IP4 {c2s.src}\r\n
+# save fragments for later use
+- save:
+    body1: | 
+      v=0\r\n
+      o=user1 53655765 2353687637 IN IP4 {c2s.src}\r\n
+      s=-\r\n
+      c=IN IP4 {c2s.src[:2]}
+    body2: |
+      {c2s.src[3:]}\r\n
+      t=0 0\r\n
+      m=audio {random_num(10000,15000)} RTP/AVP 0\r\n
+      a=rtpmap:0 PCMU/8000\r\n
+
+
 
 Implementation
 ----------------------------------------------------------------------
@@ -299,6 +309,11 @@ replay data uses its own routing rules, and interface confuguration that are
 independent of the underlying os routing. Therefore no routing or ip address
 changes are required in the replay machine.
 
+We can configure source based or destination based routing. 
+When source based routing is used each entry specifies the egress-interface and next-hop
+mac address for each source ip.
+When destination based routing is used each entry specifies the egress-interface and next-hop
+mac address for each destination netmask
 
 
 Scenario
@@ -337,7 +352,7 @@ Usage:
 Example:
     base64 dns_resp_local.bin | python3 split_base64.py 79
 Sample use:
-    replay_data.py -t protocol_tests/dns.yaml -r sip_tests/routing_192.yaml -l INFO
+    replay_data.py -t protocol_tests/dns.yaml -dr sip_tests/routing_192.yaml -l INFO
 
 
 
