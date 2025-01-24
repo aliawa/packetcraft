@@ -3,17 +3,12 @@
 #   contact <==  future call
 
 flows:
-  s2c:
-    proto: udp
-    src: 192.168.61.213
-    sport: 5060
-
   c2s:
     proto: udp
-    src: 192.168.60.212
+    src: 192.168.60.112
     sport: 'random_num(6000,9000)'
-    dst: s2c.src
-    dport: s2c.sport
+    dst: 192.168.61.113
+    dport: 5060
 
   c2s_via:
     proto: udp
