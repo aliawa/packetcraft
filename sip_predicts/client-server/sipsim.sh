@@ -10,16 +10,16 @@ ROUTES_Clnt=vm16_49_client.yaml
 
 case $1 in
     invite_server)
-        sudo python3 $DIR/replay_data.py -sr $DIR/routing/ROUTES_Clnt.yaml -t $DIR/sip_predicts/client-server/invite_converted_server.yaml -l I
+        sudo python3 $DIR/replay_data.py -sr $DIR/routing/$ROUTES_Clnt -t $DIR/sip_predicts/client-server/invite_converted_server.yaml -l INFO
         ;;
     register_client)
-        sudo python3 $DIR/replay_data.py -s -sr $DIR/routing/ROUTES_Clnt.yaml -t $DIR/sip_predicts/client-server/register_client.yaml -l INFO
+        sudo python3 $DIR/replay_data.py -sr $DIR/routing/$ROUTES_Clnt -t $DIR/sip_predicts/client-server/register_client.yaml -l INFO
         ;;
     invite_client)
         [ -z "$2" ] && echo -e "Port is requried\n" && exit
         echo "s2c_src: 192.168.70.220" > $TMP/myparam.yaml
         echo "s2c_port: $2" >> $TMP/myparam.yaml
-        sudo python3 $DIR/replay_data.py -sr $DIR/routing/$ROUTES_Srvr -t $DIR/sip_predicts/client-server/invite_converted_client.yaml -l INFO
+        sudo python3 $DIR/replay_data.py -sr $DIR/routing/$ROUTES_Srvr -t $DIR/sip_predicts/client-server/invite_converted_client.yaml -l INFO -p $TMP/myparam.yaml
         ;;
     register_server)
         sudo python3 $DIR/replay_data.py -sr $DIR/routing/$ROUTES_Srvr -t $DIR/sip_predicts/client-server/register_server.yaml -l INFO
