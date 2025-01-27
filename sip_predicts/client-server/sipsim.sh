@@ -1,12 +1,16 @@
 TMP=$HOME/tmp
 
-DIR=$HOME/packetcraft
-ROUTES_Srvr=vm17_56_server.yaml
-ROUTES_Clnt=vm16_49_client.yaml
+#DIR=$HOME/packetcraft
+#ROUTES_Srvr=vm17_56_server.yaml
+#ROUTES_Clnt=vm16_49_client.yaml
+#requirement for vm-17-55 setup:
+#   1/1 192.168.60.1/24
+#   1/2 192.168.61.1/24
 
-#DIR=$HOME/aliawa/packetcraft
-#ROUTES_Srvr=ocean_ranch_server_src.yaml
-#ROUTES_Clnt=ocean_ranch_client_src.yaml
+
+DIR=$HOME/aliawa/packetcraft
+ROUTES_Srvr=ocean_ranch_server_src.yaml
+ROUTES_Clnt=ocean_ranch_client_src.yaml
 
 case $1 in
     invite_server)
