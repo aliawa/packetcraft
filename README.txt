@@ -353,7 +353,7 @@ python3 tcp_list_dataflow.py -pc 3286 -ps 21 -o flow_c2s -r rx tx
 
 #--------------------------------------------------------------------#
 |                                                                    |
-|                       New replay_data.py                           |
+|                       replay_data.py  v3.0                         |
 |                                                                    |
 #--------------------------------------------------------------------#
 
@@ -364,13 +364,13 @@ Global variables
 
 recv action:
     if a "name: <name>" is provided then search fields can be accessed as
-        <name>.<field_name>
-    otherwise search fields will be accessed as recv.<field_name>
+        <name>['field_name']
+    otherwise search fields will be accessed as recv['field_name']
 
 The global 'pkt' always points to last received packet
 
 Helper functions:
-    random(a, b)     # returns random number N such that a <= N <= b
+    random_num(a, b)     # returns random number N such that a <= N <= b
     is_valid_ip4(string)
     is_valid_port(int)
 
