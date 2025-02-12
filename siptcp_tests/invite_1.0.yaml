@@ -1,27 +1,27 @@
 flows:
-  # 's2c':
-  #    proto: tcp
-  #    src: '10.1.1.49'
-  #    sport: '5060'
-
-  # 'c2s':
-  #    proto: tcp
-  #    src: '192.168.1.49'
-  #    sport: 'random_num(5000, 8000)'
-  #    dst: 's2c.src'
-  #    dport: 's2c.sport'
-
   's2c':
      proto: tcp
-     src: '10.5.16.49'
+     src: '10.1.1.49'
      sport: '5060'
 
   'c2s':
      proto: tcp
-     src: '100.100.71.49'
+     src: '192.168.1.49'
      sport: 'random_num(5000, 8000)'
      dst: 's2c.src'
      dport: 's2c.sport'
+
+  # 's2c':
+  #    proto: tcp
+  #    src: '10.5.16.49'
+  #    sport: '5060'
+
+  # 'c2s':
+  #    proto: tcp
+  #    src: '100.100.71.49'
+  #    sport: 'random_num(5000, 8000)'
+  #    dst: 's2c.src'
+  #    dport: 's2c.sport'
 
 
 scenario:

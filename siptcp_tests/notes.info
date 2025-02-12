@@ -12,10 +12,8 @@ register_large_10.3.1.yaml
 register_large_10.3.2.yaml
 register_large_10.3.3.noproxy.yaml          Assembling 44 segments and sending them after resplitting
 register_large_10.3.5.yaml
-routing_192_0.yaml
-routing_192_1.yaml
 
-invite_1.yaml                           no problems, standard case
+invite_1.yaml                           complete invite in single tcp segment 
 invite_2.1.yaml                         request-uri after @
 invite_2.yaml                           request-uri ip 
 invite_3.1.yaml                         Via TCP

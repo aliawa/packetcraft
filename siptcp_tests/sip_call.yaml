@@ -1,23 +1,26 @@
 flows:
     # Destination nat testing
     #  'c2s':
-    #    src: 192.168.1.49
+    #    src: 'c2s.src'
     #    sport: 5060
     #    dst: 100.10.10.10
     #    dport: 6000
 
   # Source nat testing
   's2c':
+    proto: 'tcp'
     src: '10.1.1.49'
     sport: '5060'
 
   'c2s':
+    proto: 'tcp'
     src: '192.168.1.49' 
     sport: 'random_num(5000, 7000)'
     dst: s2c.src
     dport: s2c.sport
 
   's2c_contact':
+    proto: 'tcp'
     src: 's2c.src'
     sport: 5070
 
@@ -36,6 +39,22 @@ flows:
 
 
 scenario:
+- send:
+    flow: c2s
+    flags: S
+- recv:
+    flow: s2c
+    flags: S
+    exec:
+    - s2c.dst=pkt[IP].src
+    - s2c.dport=pkt[TCP].sport
+- send:
+    flow: s2c
+    flags: SA
+- recv:
+    flow: c2s
+    flags: SA
+
 - save:
     body: |
          v=0\r\n

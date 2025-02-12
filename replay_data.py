@@ -302,7 +302,7 @@ def create_packet(act):
 
     # udp/tcp
     if (fl.proto == "tcp"):
-        pkt = ip_layr/TCP(sport=fl.sport, dport=fl.dport, ack=fl.ack, seq=fl.seq, window=65535)
+        pkt = ip_layr/TCP(sport=int(fl.sport), dport=int(fl.dport), ack=fl.ack, seq=fl.seq, window=65535)
     else:
         pkt = ip_layr/UDP(sport=int(fl.sport), dport=int(fl.dport))
 
