@@ -212,8 +212,9 @@ def update_l3_l4(fl, pkt):
             endseq = sseq + 1
             assert not Raw in pkt   # not expecting data in FIN or SYN packet
         elif pkt[TCP].payload:
-            endseq = sseq + len(pkt[TCP].payload) 
-            genlog.debug(f"payload in packet, seq {sseq}-{endseq-1}")
+            if Raw in pkt:
+                endseq = sseq + len(pkt[TCP].payload) 
+                genlog.debug(f"payload in packet, seq {sseq}-{endseq-1}")
 
         # update receive next sequence number
         if sseq == fl.ack:

@@ -11,63 +11,88 @@ flows:
      src: '10.1.1.49'
      sport: 21
 
+  'c2s_data':
+     proto: 'tcp'
+     src: 'c2s.src'
+     sport: '56121'
+
 
 scenario: 
 - send:
     flow: 'c2s'
     flags: S
-
 - recv:
     flow: 's2c'
     flags: S
     exec:
     - s2c.dst=pkt[IP].src
     - s2c.dport=pkt[TCP].sport
-
 - send:
     flow: 's2c'
     flags: SA
-
 - recv:
-   flow: 'c2s'
-   flags: SA
+    flow: 'c2s'
+    flags: SA
+- send: 
+    flow: 'c2s'
+    flags: A
+- recv:
+    flow: 's2c'
+    flags: A
+
+- send: 
+    flow: 's2c'
+    data: |-
+      220 Service ready for new user\r\n
+- recv: 
+    flow: 'c2s'
+    match: '220.*'
 
  # FTP session  
 - send:
    flow: 'c2s'
    data: |-
      USER aawais\r\n
-
 - recv:
     flow: 's2c'
-    match: 'USER.*'
-
-- delay:
-    timeout: 500
-
+    match: 'USER .+'
 - send:
     flow: 's2c'
     data: |-
       331 Enter password.\r\n
-
 - recv:
     flow: 'c2s'
-    match: '331'
+    match: '331 .*pass'
 
-# port 55353
+
 - send:
     flow: 'c2s'
     data: |-
-      PORT 192,168,1,1,219,57\r\n
-
+      PASS simsim\r\n
 - recv:
     flow: 's2c'
-    match: 'PORT.*'
+    match: 'PASS .+'
+- send: 
+    flow: 's2c'
+    data: |-
+      230 aawais logged on.\r\n
+- recv:
+    flow: 'c2s'
+    match: '230.*logged'
 
-- delay:
-    timeout: 500
 
+- send:
+    flow: 'c2s'
+    data: |-
+      PORT {c2s.src.replace(".",",")},{c2s_data.sport>>8},{c2s_data.sport & 0xff}\r\n
+- recv:
+    flow: 's2c'
+    match: 'PORT .+'
 - send:
     flow: 's2c'
     data: |-
       200 PORT subcommand request successful.\r\n
+- recv:
+    flow: 'c2s'
+    match: '200.*successful'
+
