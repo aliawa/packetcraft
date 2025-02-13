@@ -40,6 +40,10 @@ scenario:
     flow: 's2c'
     flags: A
 
+- connect:
+    flow: 'c2s'
+
+
 - send: 
     flow: 's2c'
     data: |-

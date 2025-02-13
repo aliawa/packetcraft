@@ -4,13 +4,12 @@
 import argparse
 import yaml
 import queue
-import textwrap
 import logging
 import ipaddress
 import inspect
 import string
-from scapy.all import *
-import pdb
+from scapy.layers.all import *
+from scapy.sendrecv import *
 from enum import Enum
 
 

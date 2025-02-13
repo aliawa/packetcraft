@@ -51,7 +51,7 @@ scenario:
       220 Service ready for new user\r\n
 - recv: 
     flow: 'c2s'
-    match: '220'
+    match: '220.*'
 
  # FTP session  
 - send:
@@ -60,16 +60,14 @@ scenario:
      USER aawais\r\n
 - recv:
     flow: 's2c'
-    match: 'USER.*'
-- delay:
-    timeout: 500
+    match: 'USER .+'
 - send:
     flow: 's2c'
     data: |-
       331 Enter password.\r\n
 - recv:
     flow: 'c2s'
-    match: '331'
+    match: '331 .*pass'
 
 
 - send:
@@ -78,7 +76,7 @@ scenario:
       PASS simsim\r\n
 - recv:
     flow: 's2c'
-    match: 'PASS'
+    match: 'PASS .+'
 - send: 
     flow: 's2c'
     data: |-
@@ -93,13 +91,13 @@ scenario:
     data: |-
       PORT {c2s.src.replace(".",",")},{c2s_data.sport>>8},{c2s_data.sport & 0xff}\r\n
 - recv:
-   flow: 's2c'
-   search: 
+    flow: 's2c'
+    search: 
         - 'PORT (?P<ip>\d+,\d+,\d+,\d+),(?P<port>\d+,\d+)'
 - send:
-   flow: 's2c'
-   data: |-
-     200 PORT subcommand request successful.
+    flow: 's2c'
+    data: |-
+      200 PORT subcommand request successful.\r\n
 - recv:
     flow: 'c2s'
     match: '200.*successful'
