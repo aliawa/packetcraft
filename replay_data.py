@@ -280,7 +280,7 @@ def ip2nxt_hop(ip):
 def create_packet(act):
     genlog.debug("{} called from {}".format(inspect.stack()[0][3],inspect.stack()[1][3]))
 
-    fl = globals()[act['flow']]
+    fl = flows[act['flow']]
     if (fl.dst == None):
         genlog.error("[x] Error: No destination ip for {}".format(act['flow']))
         raise Error ("No destination ip for {}".format(act['flow']))
@@ -409,7 +409,7 @@ def do_delay(act, c):
 
 
 def do_recv(act, c):
-    fl = globals()[act['flow']]
+    fl = flows[act['flow']]
     genlog.debug("\n{} on intf {}".format(inspect.stack()[0][3], fl.intf))
     to = eval(act['timeout']) if 'timeout' in act else RCV_TIMEOUT
     
@@ -470,7 +470,7 @@ def do_send(act, c):
     else:
         pkt = create_packet(act)
 
-    fl = globals()[act['flow']]
+    fl = flows[act['flow']]
     intf = ip2dev(fl.src)
 
     if TCP in pkt:
@@ -488,6 +488,33 @@ def do_send(act, c):
         echo(pkt, fl, act)
 
     return c+1
+
+
+
+def do_connect(act, c):
+    flname = act['flow']
+    fl = flows[flname]
+    peer_flname = act['peer_flow']
+    peer_fl = flows[peer_flname]
+
+    if fl.proto == peer_fl.proto == 'udp':
+        return c+1
+    elif fl.proto != peer_fl.proto:
+        raise Error("connect protocol mismatch")
+
+    exec1 = f"{peer_flname}.dst =  pkt[IP].src"
+    exec2 = f"{peer_flname}.dport =  pkt[TCP].sport"
+    scen = list()
+    scen.append  ({'send': {'flow':flname,      'flags':'S' }});
+    scen.append  ({'recv': {'flow':peer_flname, 'flags':'S', 'exec':[exec1, exec2] }});
+    scen.append  ({'send': {'flow':peer_flname, 'flags':'SA'}});
+    scen.append  ({'recv': {'flow':flname,      'flags':'SA'}});
+    scen.append  ({'send': {'flow':flname,      'flags':'A' }});
+    scen.append  ({'recv': {'flow':peer_flname, 'flags':'A' }});
+    run_scenario(scen)
+    return c+1
+
+
 
 
 def do_create(act, c):
@@ -567,7 +594,8 @@ actions = {
         "loop-start" : do_loop_start,
         "loop-end"   : do_loop_end,
         "save"       : do_save,
-        "execute"    : do_execute
+        "execute"    : do_execute,
+        "connect"    : do_connect
         }
 
 
@@ -657,6 +685,7 @@ def setup(scenario_f, routes_f, route_type, params_f, pcap_f):
     global rcvqueue
     global recv          # last received packet
     global ip2dev_tbl
+    global flows
 
     with open(scenario_f, 'r') as f:
         scen_dict = yaml.full_load(f)
@@ -681,9 +710,11 @@ def setup(scenario_f, routes_f, route_type, params_f, pcap_f):
 
     intfs = set()
     hosts = set()
+    flows = {}
     for name, fl in scen_dict['flows'].items():
         flobj = Flow(fl)
         globals()[name]= flobj
+        flows[name]= flobj
         intfs.add(flobj.intf)
         hosts.add(flobj.src)
 

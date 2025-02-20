@@ -14,36 +14,23 @@ flows:
   'c2s_data':
      proto: 'tcp'
      src: 'c2s.src'
-     sport: '56121'
+     sport: random_num(50000, 60000)
 
-'s2c_data':
-   proto: 'tcp'
-   src: s2c.ip
-   sport: 20
-   dst: c2s.src
+  's2c_data':
+     proto: 'tcp'
+     src: s2c.src
+     sport: 20
+   
+  'c2s_data':
+     proto: 'tcp'
+     src: c2s.src
+     sport: random_num(30000, 40000)
+
 
 scenario: 
-- send:
+- connect: 
     flow: 'c2s'
-    flags: S
-- recv:
-    flow: 's2c'
-    flags: S
-    exec:
-    - s2c.dst=pkt[IP].src
-    - s2c.dport=pkt[TCP].sport
-- send:
-    flow: 's2c'
-    flags: SA
-- recv:
-    flow: 'c2s'
-    flags: SA
-- send: 
-    flow: 'c2s'
-    flags: A
-- recv:
-    flow: 's2c'
-    flags: A
+    peer_flow: 's2c'
 
 - send: 
     flow: 's2c'
@@ -52,6 +39,7 @@ scenario:
 - recv: 
     flow: 'c2s'
     match: '220.*'
+
 
  # FTP session  
 - send:
@@ -89,11 +77,14 @@ scenario:
 - send:
     flow: 'c2s'
     data: |-
-      PORT {c2s.src.replace(".",",")},{c2s_data.sport>>8},{c2s_data.sport & 0xff}\r\n
+      PORT {c2s_data.src.replace(".",",")},{c2s_data.sport>>8},{c2s_data.sport & 0xff}\r\n
 - recv:
     flow: 's2c'
     search: 
-        - 'PORT (?P<ip>\d+,\d+,\d+,\d+),(?P<port>\d+,\d+)'
+      - 'PORT (?P<ip>\d+,\d+,\d+,\d+),(?P<port1>\d+),(?P<port2>\d+)'
+    exec:
+      - s2c_data.dst = recv['ip'].replace(",", ".") 
+      - s2c_data.dport = (int(recv['port1'])<<8) | (int(recv['port2']) & 0xff)
 - send:
     flow: 's2c'
     data: |-
@@ -103,34 +94,18 @@ scenario:
     match: '200.*successful'
 
 
- # Handshake
- - flow: 's2c_data'
-   action: 'send'
-   flags: S
-
- - flow: 'c2s_data'
-   action: 'recv'
-   flags: S
-   update: True
-
- - flow: 's2c_data'
-   action: 'send'
-   flags: SA
-
- - flow: 'c2s_data'
-   action: 'recv'
-   flags: SA
-
- - flow: 's2c_data'
-   action: send
-   type: text
-   data: 'DATA DATA DATA DATA DATA'
-
- - flow: 's2c_data'
-   action: send
-   type: text
-   data: 'DATA DATA DATA DATA DATA'
 
 
+# ------ Data connection ------
 
+- connect:
+    flow: 's2c_data'
+    peer_flow: 'c2s_data'
 
+- send:
+    flow: 's2c_data'
+    data: '1234567'
+
+- recv:
+    flow: 'c2s_data'
+    match: '1234567'
