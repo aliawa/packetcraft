@@ -123,6 +123,14 @@ Example usage of dictionaries:
 
 Commands
 ----------------------------------------------------------------------
+- connect:
+    flow: ...
+    peer_flow: ...
+    do tcp-handshake between the two given flows. The initiating flow must have
+    dst and dport specified.
+    This command has no effect when the two flows are udp, so it can be safely
+    used with udp scenarios
+
 - recv:
     Add a recv action even if no data needs to be extracted to update the ACK
     counter
