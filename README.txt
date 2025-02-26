@@ -341,6 +341,12 @@ Sample use:
     replay_data.py -t protocol_tests/dns.yaml -r sip_tests/routing_192.yaml -l INFO
 
 
+Out of order packets
+----------------------------------------------------------------------
+TODO, 
+
+
+
 
 #--------------------------------------------------------------------#
 |                                                                    |
@@ -348,7 +354,30 @@ Sample use:
 |                                                                    |
 #--------------------------------------------------------------------#
 
-python3 tcp_list_dataflow.py -pc 3286 -ps 21 -o flow_c2s -r rx tx
+python3 tcp_list_dataflow.py -pc 3286 -ipc 192.168.1.49 -o flow_c2s -r rx tx
+
+The script filters out the stream to plot based on client ip and port. 
+If there is NAT then -pcn and -ipcn must be provided to find the f2s 
+(firewall-to-server) and s2f (server-to-firewall) flows
+
+*   wrong sequence number or wrong ack number
++   retransmitted packet.
+
+Output with sip_call using proxy. -flow_c2s
+
+     id        seq   len       next              id        seq   len       next
+    ----       ----  ----       ----            ----       ----  ----       ----
+     42          0      0          1  -->|                                              SYN from client to fw
+                                         |-->     42          0      0          1       SYN from fw to server
+                                         |<--     17                            1       SYN/ACK from server to fw
+     17                            1  <--|                                              SYN/ACK from fw to client
+     43          1    617        618  -->|                                              INVITE from client, tcp payload len is 617, client is expection tcp-ack = 618
+                                         |-->  24066          1    617        618       INVITE from proxy to server, note the ip.id changed becaue proxy created a new packet
+                                         |<--     18                          618       INVITE acked by server
+  59580                          618  <--|                                              INVITE tcp-ack from proxy to client
+                                         |-->  47758        618      0        618       Proxy sending tcp-ack on its own to 200 OK received from server
+     44        618      0        618  -->|                                              client sends tcp-ack to 200 OK
+
 
 
 #--------------------------------------------------------------------#

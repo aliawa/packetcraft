@@ -40,8 +40,8 @@ cmdln_parsr = argparse.ArgumentParser()
 cmdln_parsr.add_argument('rx')
 cmdln_parsr.add_argument('tx')
 cmdln_parsr.add_argument('-pc','--clntport', type=int, required=True)
-cmdln_parsr.add_argument('-ps','--srvrport', type=int, required=True)
-cmdln_parsr.add_argument('-ipc','--clntip')
+cmdln_parsr.add_argument('-ps','--srvrport', type=int)
+cmdln_parsr.add_argument('-ipc','--clntip', required=True)
 cmdln_parsr.add_argument('-ips','--srvrip')
 cmdln_parsr.add_argument('-pcn','--clntport_n', type=int)
 cmdln_parsr.add_argument('-psn','--srvrport_n', type=int)
@@ -62,65 +62,62 @@ if not args.clntip_n:
 if not args.srvrport_n:
     args.srvrport_n = args.srvrport
 
+
 def rxfilter(args, p):
     if  TCP in p:
-        if ((p[TCP].sport == args.clntport and p[TCP].dport == args.srvrport) or 
-            (p[TCP].sport == args.srvrport_n and p[TCP].dport == args.clntport_n)):
-            if args.clntip:
-                if p[TCP].sport == args.clntport and p[IP].src != args.clntip:
-                    return False
-            if args.srvrip:
-                if p[TCP].dport == args.srvrport and p[IP].dst != args.srvrip:
-                    return False
-
+        if (p[IP].src == args.clntip and p[TCP].sport == args.clntport) or (p[IP].dst == args.clntip_n and p[TCP].dport == args.clntport_n) :
             return True
-    else:
-        return False
-
+    return False
 
 def txfilter(args, p):
     if  TCP in p:
-        if ((p[TCP].sport == args.clntport_n and p[TCP].dport == args.srvrport_n) or
-            (p[TCP].sport == args.srvrport and p[TCP].dport == args.clntport)): 
-            if args.clntip_n:
-                if p[TCP].sport == args.clntport_n and p[IP].src != args.clntip_n:
-                    return False
-            if args.srvrip_n:
-                if p[TCP].dport == args.srvrport_n and p[IP].dst != args.srvrip_n:
-                    return False
+        if (p[IP].src == args.clntip_n and p[TCP].sport == args.clntport_n) or (p[IP].dst == args.clntip and p[TCP].dport == args.clntport) :
             return True
-    else:
-        return False
+    return False
+
 
 @dataclass
 class FlowState:
+    name: str = ""
     complmnt: str = ""
     strt_seq: int = 0
     last_seq: int = 0
     last_len: int = 0
     expected: int = 0
+    flg_init: int = 0
 
-    def update(self, seq, plen, ack, nxt):
+    # def update(self, seq, plen, ack, nxt):
+    def update(self, pkt, nxt):
         seq_flg= " "
         ack_flg= " "
+        cur_plen = len(pkt[TCP].payload) if Raw in pkt else 0
+        cur_seq  = pkt[TCP].seq
+        cur_ack  = pkt[TCP].ack
 
-        if self.strt_seq:
-            if self.expected != seq:
-                if self.last_seq == seq and self.last_len == plen:
-                    seq_flg="+"
+        if self.flg_init:
+            if self.expected != cur_seq:
+                if self.last_seq == cur_seq and self.last_len == cur_plen and self.last_ack == cur_ack:
+                    seq_flg="+" # retransmission
                 else:
-                    seq_flg="*"
+                    seq_flg="*" # out of sequence
+            else:
+                self.expected = nxt
+                self.last_len = cur_plen
+                self.last_seq = cur_seq
+                self.last_ack = cur_ack
 
-            if Flows[self.complmnt].expected != ack:
-                ack_flg= "*"
-            elif self.last_seq == seq and self.last_len == plen:
-                ack_flg = "+"
 
-            self.expected = nxt
-            self.last_seq = seq
-            self.last_len = plen
+            if Flows[self.complmnt].expected != cur_ack:
+                ack_flg= "*"    # wrong ack number
+                
+
         else:
-            self.strt_seq = seq
+            self.strt_seq = cur_seq
+            self.flg_init = 1
+            self.expected = nxt
+            self.last_len = cur_plen
+            self.last_seq = cur_seq
+            self.last_ack = cur_ack
 
         return (seq_flg, ack_flg)
 
@@ -136,21 +133,16 @@ class MyPackt:
 
     def __post_init__(self, args, pcap):
         if pcap == 'rx':
-            if self.spkt[TCP].sport == args.clntport:
+            if self.spkt[TCP].sport == args.clntport and self.spkt[IP].src == args.clntip:
                 self.flow = 'c2f'
-            elif self.spkt[TCP].sport == args.srvrport_n:
+            elif self.spkt[TCP].dport == args.clntport_n and self.spkt[IP].dst == args.clntip_n:
                 self.flow = 's2f'
         else:
-            if self.spkt[TCP].dport == args.clntport:
-                self.flow = 'f2c'
-            elif self.spkt[TCP].dport == args.srvrport_n:
+            if self.spkt[TCP].sport == args.clntport_n and self.spkt[IP].src == args.clntip_n:
                 self.flow = 'f2s'
+            elif self.spkt[TCP].dport == args.clntport and self.spkt[IP].dst == args.clntip:
+                self.flow = 'f2c'
 
-        plen = len(self.spkt[TCP].payload) if Raw in self.spkt else 0
-        self.seq_flg, self.ack_flg = Flows[self.flow].update(self.spkt[TCP].seq, 
-                                                             plen,
-                                                             self.spkt[TCP].ack,
-                                                             self.next())
 
     @property
     def time(self):
@@ -219,6 +211,8 @@ class pcapsItr:
         else:
             raise StopIteration
 
+
+        pkt.seq_flg, pkt.ack_flg = Flows[pkt.flow].update(pkt.spkt, pkt.next())
         return pkt
 
 # return absolute or relative
@@ -336,18 +330,20 @@ def print_detail(pcap, args):
 
 
 
+
+
 def print_flow(pcap, args):
     output_map = {
-            'c2f': ("",              " -->|"), 
-            'f2s': (41*" "+"|-->",   ""     ), 
-            'f2c': ("",              "<--|"), 
-            's2f': (41*" "+"|<--",   ""     ) 
+            'c2f': ( 2*" ",           "-->|"), 
+            'f2s': (42*" "+"|-->",    ""    ), 
+            'f2c': ( 2*" ",           "<--|"), 
+            's2f': (42*" "+"|<--",    ""    ) 
     }
 
     for ed in ['','\n']:
-        print (f" {'id':>7} {'seq':>10} {'len':>5} {'next':>10} {' '*7}", end=ed)
+        print (f"{'id':>8}{'seq':>11}{'len':>7}{'next':>11}{' '*7}", end=ed)
     for ed in ['','\n']:
-        print (f" {'----':>7} {'----':>10} {'----':>5} {'----':>10} {' '*7}", end=ed)
+        print (f"{'----':>8}{'----':>11}{'----':>7}{'----':>11}{' '*7}", end=ed)
 
     for p in pcap:
         pkt = p.spkt
@@ -360,16 +356,16 @@ def print_flow(pcap, args):
 
         if args.output == 'flow_c2s':
             if flow == 'c2f' or flow == 'f2s':
-                print (f"{pre}{pkt[IP].id:7} {seq:10}{p.seq_flg} {plen:5} {nxt:10} {post}")
+                print (f"{pre}{pkt[IP].id:6} {seq:10}{p.seq_flg} {plen:5} {nxt:10}  {post}")
             elif flow == 'f2c' or flow == 's2f':
-                gap = " "
-                print (f"{pre}{pkt[IP].id:7} {gap:10} {gap:6} {ack:10}{p.ack_flg} {post}")
+                gap = 19*" "
+                print (f"{pre}{pkt[IP].id:6}{gap}{ack:10}{p.ack_flg} {post}")
         elif args.output == 'flow_s2c':
             if flow == 'f2c' or flow == 's2f':
-                print (f"{pre}{p.seq_flg}{pkt[IP].id:7} {seq:10}{p.seq_flg} {plen:5} {nxt:10} {post}")
+                print (f"{pre}{pkt[IP].id:6} {seq:10}{p.seq_flg} {plen:5} {nxt:10}  {post}")
             elif flow == 'c2f' or flow == 'f2s':
-                gap = " "
-                print (f"{pre}{pkt[IP].id:7} {gap:10} {gap:6} {ack:10}{p.ack_flg} {post}")
+                gap = 19*" "
+                print (f"{pre}{pkt[IP].id:6}{gap}{ack:10}{p.ack_flg} {post}")
         else:
             print ("Unknown output type")
 
@@ -385,10 +381,10 @@ def repr_str(dumper: RoundTripRepresenter, data: str):
 # ----------------------------------------------------------------------
 
 # Global Flow state database
-Flows = {'c2f': FlowState('f2c'),
-         'f2c': FlowState('c2f'),
-         'f2s': FlowState('s2f'),
-         's2f': FlowState('f2s')}
+Flows = {'c2f': FlowState('c2f', 'f2c'),
+         'f2c': FlowState('f2c', 'c2f'),
+         'f2s': FlowState('f2s', 's2f'),
+         's2f': FlowState('s2f', 'f2s')}
 
 # Global pcap iterator
 pcapIter = pcapsItr(args)
