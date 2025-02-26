@@ -22,7 +22,12 @@ flows:
   's2c_contact':
     proto: 'tcp'
     src: 's2c.src'
-    sport: 5070
+    sport: 's2c.sport + 10'
+
+  'c2s_contact':
+    proto: 'tcp'
+    src: 'c2s.src'
+    sport: 'c2s.sport + 10'
 
   'c2s_rtp':
     src: 'c2s.src'
@@ -140,11 +145,21 @@ scenario:
     - c2s_rtp.dport=recv['rtp_dport']
     - c2s_rtcp.dst=recv['rtp_dst']
     - c2s_rtcp.dport=int(recv['rtp_dport']) + 1
-    - c2s.dst=recv['contact_ip']
-    - c2s.dport=recv['contact_port']
+    - c2s_contact.dst=recv['contact_ip']
+    - c2s_contact.dport=recv['contact_port']
+
+
+- send:
+    flow: c2s
+    flags: A
+
+
+- connect:
+    flow: c2s_contact
+    peer_flow: s2c_contact
 
 - send: 
-    flow: c2s
+    flow: c2s_contact
     data: |-
          ACK sip:7405557000@{c2s.dst}:{c2s.dport};user=phone SIP/2.0\r\n
          Via: SIP/2.0/UDP {c2s.src}:{c2s.sport};branch=z9hG4bKbe\r\n
@@ -159,6 +174,13 @@ scenario:
 - recv:
     flow: s2c_contact
     match: 'ACK'
+    exec:
+      - s2c_contact.dst=pkt[IP].src
+      - s2c_contact.dport=pkt[TCP].sport
+
+- send:
+    flow: s2c_contact
+    flags: A
 
 - send:
     flow: s2c_rtp
