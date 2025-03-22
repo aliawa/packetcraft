@@ -8,9 +8,10 @@ import logging
 import ipaddress
 import inspect
 import string
-from scapy.layers.all import *
+from scapy.layers.all import * 
 from scapy.sendrecv import *
 from enum import Enum
+from textwrap3 import indent
 
 
 # -----------------------------------------------------------
@@ -631,7 +632,7 @@ def pkt_dbg_print(pkt):
 
     if (pkt.haslayer(Raw)):
         try:
-            pktlog.debug(textwrap.indent(pkt.load.decode('utf8'), '    '))
+            pktlog.debug(indent(pkt.load.decode('utf8'), '    '))
         except UnicodeDecodeError: 
             pass
 
