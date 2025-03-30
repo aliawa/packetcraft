@@ -1,25 +1,33 @@
 flows:
     # Destination nat testing
     #  'c2s':
-    #    src: 192.168.1.49
+    #    src: 'c2s.src'
     #    sport: 5060
     #    dst: 100.10.10.10
     #    dport: 6000
 
   # Source nat testing
   's2c':
-    src: '10.1.16.49'
+    proto: 'tcp'
+    src: '10.1.1.49'
     sport: '5060'
 
   'c2s':
-    src: '192.168.16.49' 
+    proto: 'tcp'
+    src: '192.168.1.49' 
     sport: 'random_num(5000, 7000)'
     dst: s2c.src
     dport: s2c.sport
 
   's2c_contact':
+    proto: 'tcp'
     src: 's2c.src'
-    sport: 5070
+    sport: 's2c.sport + 10'
+
+  'c2s_contact':
+    proto: 'tcp'
+    src: 'c2s.src'
+    sport: 'c2s.sport + 10'
 
   'c2s_rtp':
     src: 'c2s.src'
@@ -27,9 +35,31 @@ flows:
   's2c_rtp':
     src: 's2c.src'
     sport: 'random_num(16000, 20000)'
+  's2c_rtcp':
+    src: s2c_rtp.src
+    sport: s2c_rtp.sport + 1
+  'c2s_rtcp':
+    src: c2s_rtp.src
+    sport: c2s_rtp.sport + 1
 
 
 scenario:
+- send:
+    flow: c2s
+    flags: S
+- recv:
+    flow: s2c
+    flags: S
+    exec:
+    - s2c.dst=pkt[IP].src
+    - s2c.dport=pkt[TCP].sport
+- send:
+    flow: s2c
+    flags: SA
+- recv:
+    flow: c2s
+    flags: SA
+
 - save:
     body: |
          v=0\r\n
@@ -69,10 +99,9 @@ scenario:
     - 'To: (?P<to>.*)\r\n'
     - c=IN IP4 (?P<rtp_dst>.*)\r\n
     - m=audio (?P<rtp_dport>\d+)
-    verify:
-    - len(recv['rtp_dst']) != 0
-    - recv['rtp_dport'] != 0
     exec:
+    - s2c_rtp.dst=recv['rtp_dst']
+    - s2c_rtp.dport=recv['rtp_dport']
     - s2c.dst=recv['client_ip']
     - s2c.dport=recv['client_port']
 
@@ -111,7 +140,63 @@ scenario:
     - 'Contact: <sip:[0-9]+@(?P<contact_ip>[\d.]+):(?P<contact_port>\d+)>'
     - c=IN IP4 (?P<rtp_dst>.*)\r\n
     - m=audio (?P<rtp_dport>\d+)
-    verify:
-    - len(recv['rtp_dst']) != 0
-    - recv['rtp_dport'] != 0
-    - len(recv['contact_ip']) != 0
+    exec:
+    - c2s_rtp.dst=recv['rtp_dst']
+    - c2s_rtp.dport=recv['rtp_dport']
+    - c2s_rtcp.dst=recv['rtp_dst']
+    - c2s_rtcp.dport=int(recv['rtp_dport']) + 1
+    - c2s_contact.dst=recv['contact_ip']
+    - c2s_contact.dport=recv['contact_port']
+
+
+- send:
+    flow: c2s
+    flags: A
+
+
+- connect:
+    flow: c2s_contact
+    peer_flow: s2c_contact
+
+- send: 
+    flow: c2s_contact
+    data: |-
+         ACK sip:7405557000@{c2s.dst}:{c2s.dport};user=phone SIP/2.0\r\n
+         Via: SIP/2.0/UDP {c2s.src}:{c2s.sport};branch=z9hG4bKbe\r\n
+         From: "7012" <sip:7405557012@{s2c.src}:{s2c.sport}>;tag=BA76D475-4FE052EC\r\n
+         To: <sip:7405557000@{s2c.src}:{s2c.sport}>;tag=SERVER-4FE052EC\r\n
+         Call-ID: 5a2fb8b1-3c6d8673-82af160a@{c2s.src}00\r\n
+         CSeq: 1 ACK\r\n
+         Max-forwards: 70\r\n
+         Content-Length: 0\r\n
+         \r\n
+
+- recv:
+    flow: s2c_contact
+    match: 'ACK'
+    exec:
+      - s2c_contact.dst=pkt[IP].src
+      - s2c_contact.dport=pkt[TCP].sport
+
+- send:
+    flow: s2c_contact
+    flags: A
+
+- send:
+    flow: s2c_rtp
+    data: !rtp
+        ssrc: 4567
+        marker: 1
+        payload: '12345'
+
+- recv:
+    flow: c2s_rtp
+    l7-proto: "RTP"
+
+- send:
+    flow: c2s_rtcp
+    data:  '1234567'
+
+- recv:
+    flow: s2c_rtcp
+    match: '1234567'

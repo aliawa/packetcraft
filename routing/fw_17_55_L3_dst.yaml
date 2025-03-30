@@ -1,0 +1,24 @@
+# ------------------------------------------
+# ROUTE SPEC for Ubuntu.16.49 and FW.17.55
+# ------------------------------------------
+
+# next-hop and egress interface for each destination ip
+'routing':
+  '192.168.0.0/16':
+      next-hop: 00:50:56:9c:75:cd
+      dev: ens192
+  '10.2.2.49/32':
+      next-hop: 00:50:56:9c:75:cd
+      dev: ens192
+  '10.1.1.0/24':
+      next-hop: 00:50:56:9c:74:a3 
+      dev: ens224
+  '11.1.1.0/24': 
+      next-hop: 00:50:56:9c:74:a3 
+      dev: ens256
+
+# Local interfaces and their assigned ip addresses
+'interfaces':
+   'ens192': ['192.168.1.49']
+   'ens224': ['10.1.1.49']
+    

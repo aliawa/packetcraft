@@ -1,0 +1,9 @@
+# next-hop and egress interface for each source ip
+routing:
+  '192.168.60.0/24':
+    next-hop: 00:50:56:9c:74:a3
+    dev: ens192
+
+interfaces:
+    ens192: ['192.168.60.112']
+

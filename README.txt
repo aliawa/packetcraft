@@ -4,6 +4,14 @@
 |                                                                    |
 *--------------------------------------------------------------------*
 
+Required Modules
+----------------------------------------------------------------------
+pip
+scapy
+pyyaml
+textwrap3
+
+
 Need for a protocol traffic generator
 ----------------------------------------------------------------------
 Why a black box testing tool is needed
@@ -112,6 +120,12 @@ Dictionaries avaialable for commands
         - param
             - the param dictionary imported from command line
 
+    objects:
+        All flow names become global objects
+        c2s.dst
+        s2c.src 
+
+
 Example usage of dictionaries:
     statement                       Meaning
     ----------------------------    --------------------------------------
@@ -123,6 +137,14 @@ Example usage of dictionaries:
 
 Commands
 ----------------------------------------------------------------------
+- connect:
+    flow: ...
+    peer_flow: ...
+    do tcp-handshake between the two given flows. The initiating flow must have
+    dst and dport specified.
+    This command has no effect when the two flows are udp, so it can be safely
+    used with udp scenarios
+
 - recv:
     Add a recv action even if no data needs to be extracted to update the ACK
     counter
@@ -195,10 +217,18 @@ Commands
     echo: "blah blah"
 
 
--save
-  body: |
-    v=0\r\n
-    o=user1 53655765 2353687637 IN IP4 {c2s.src}\r\n
+# save fragments for later use
+- save:
+    body1: | 
+      v=0\r\n
+      o=user1 53655765 2353687637 IN IP4 {c2s.src}\r\n
+      s=-\r\n
+      c=IN IP4 {c2s.src[:2]}
+    body2: |
+      {c2s.src[3:]}\r\n
+      t=0 0\r\n
+      m=audio {random_num(10000,15000)} RTP/AVP 0\r\n
+      a=rtpmap:0 PCMU/8000\r\n
 
 Implementation
 ----------------------------------------------------------------------
@@ -300,6 +330,11 @@ replay data uses its own routing rules, and interface confuguration that are
 independent of the underlying os routing. Therefore no routing or ip address
 changes are required in the replay machine.
 
+We can configure source based or destination based routing. 
+When source based routing is used each entry specifies the egress-interface and next-hop
+mac address for each source ip.
+When destination based routing is used each entry specifies the egress-interface and next-hop
+mac address for each destination netmask
 
 
 Scenario

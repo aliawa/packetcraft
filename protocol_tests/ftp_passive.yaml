@@ -1,0 +1,92 @@
+flows:
+  'c2s':
+     proto: 'tcp'
+     src: '192.168.1.49'
+     sport: 'random_num(3000,4000)'
+     dst: '10.1.1.49'
+     dport: 21
+
+  's2c':
+     proto: 'tcp'
+     src: '10.1.1.49'
+     sport: 21
+
+  'c2s_data':
+     proto: 'tcp'
+     src: c2s.src
+     sport: 'random_num(50000,60000)'
+
+  's2c_data':
+     proto: 'tcp'
+     src: s2c.src
+     sport: 's2c.sport - 1'
+
+
+scenario: 
+- connect:
+    flow: 'c2s'
+    peer_flow: 's2c'
+
+
+- send: 
+    flow: 's2c'
+    data: |-
+      220 Service ready for new user\r\n
+
+- recv: 
+    flow: 'c2s'
+    match: '220.*'
+
+ # FTP session  
+- send:
+   flow: 'c2s'
+   data: |-
+     USER aawais\r\n
+- recv:
+    flow: 's2c'
+    match: 'USER .+'
+- send:
+    flow: 's2c'
+    data: |-
+      331 Enter password.\r\n
+- recv:
+    flow: 'c2s'
+    match: '331 .*pass'
+
+
+- send:
+    flow: 'c2s'
+    data: |-
+      PASS simsim\r\n
+- recv:
+    flow: 's2c'
+    match: 'PASS .+'
+- send: 
+    flow: 's2c'
+    data: |-
+      230 aawais logged on.\r\n
+- recv:
+    flow: 'c2s'
+    match: '230.*logged'
+
+
+- send:
+    flow: 'c2s'
+    data: 'PASV\r\n'
+- recv:
+    flow: 's2c'
+    match: 'PASV'
+
+- send:
+    flow: 's2c'
+    data: |-
+      227 Entering Passive Mode ({s2c.src.replace(".",",")},{s2c_data.sport>>8},{s2c_data.sport&0xFF}\r\n
+- recv:
+    flow: 'c2s'
+    search: 
+      - 'Entering.* \((?P<ip>\d+,\d+,\d+,\d+),(?P<port1>\d+),(?P<port2>\d+)'
+    exec:
+      - c2s_data.dst = recv['ip'].replace(",", ".") 
+      - c2s_data.dport = (int(recv['port1'])<<8) | (int(recv['port2']) & 0xff)
+
+

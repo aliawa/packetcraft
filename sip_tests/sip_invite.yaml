@@ -44,7 +44,7 @@ scenario:
       Max-forwards: 70\r\n
       Allow: INVITE, ACK, BYE, CANCEL, OPTIONS, INFO, MESSAGE, SUBSCRIBE, NOTIFY, PRACK, UPDATE, REFER\r\n
       Content-Type: application/sdp\r\n
-      Content-Length:   247\r\n
+      Content-Length:   245\r\n
       \r\n
       v=0\r\n
       o=- 978385019 978385019 IN IP4 {c2s.src}\r\n

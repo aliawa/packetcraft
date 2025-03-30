@@ -1,0 +1,111 @@
+flows:
+  'c2s':
+     proto: 'tcp'
+     src: '192.168.1.49'
+     sport: 'random_num(3000,4000)'
+     dst: '10.1.1.49'
+     dport: 21
+
+  's2c':
+     proto: 'tcp'
+     src: '10.1.1.49'
+     sport: 21
+
+  'c2s_data':
+     proto: 'tcp'
+     src: 'c2s.src'
+     sport: random_num(50000, 60000)
+
+  's2c_data':
+     proto: 'tcp'
+     src: s2c.src
+     sport: 20
+   
+  'c2s_data':
+     proto: 'tcp'
+     src: c2s.src
+     sport: random_num(30000, 40000)
+
+
+scenario: 
+- connect: 
+    flow: 'c2s'
+    peer_flow: 's2c'
+
+- send: 
+    flow: 's2c'
+    data: |-
+      220 Service ready for new user\r\n
+- recv: 
+    flow: 'c2s'
+    match: '220.*'
+
+
+ # FTP session  
+- send:
+   flow: 'c2s'
+   data: |-
+     USER aawais\r\n
+- recv:
+    flow: 's2c'
+    match: 'USER .+'
+- send:
+    flow: 's2c'
+    data: |-
+      331 Enter password.\r\n
+- recv:
+    flow: 'c2s'
+    match: '331 .*pass'
+
+
+- send:
+    flow: 'c2s'
+    data: |-
+      PASS simsim\r\n
+- recv:
+    flow: 's2c'
+    match: 'PASS .+'
+- send: 
+    flow: 's2c'
+    data: |-
+      230 aawais logged on.\r\n
+- recv:
+    flow: 'c2s'
+    match: '230.*logged'
+
+
+- send:
+    flow: 'c2s'
+    data: |-
+      PORT {c2s_data.src.replace(".",",")},{c2s_data.sport>>8},{c2s_data.sport & 0xff}\r\n
+- recv:
+    flow: 's2c'
+    search: 
+      - 'PORT (?P<ip>\d+,\d+,\d+,\d+),(?P<port1>\d+),(?P<port2>\d+)'
+    exec:
+      - s2c_data.dst = recv['ip'].replace(",", ".") 
+      - s2c_data.dport = (int(recv['port1'])<<8) | (int(recv['port2']) & 0xff)
+- send:
+    flow: 's2c'
+    data: |-
+      200 PORT subcommand request successful.\r\n
+- recv:
+    flow: 'c2s'
+    match: '200.*successful'
+
+
+
+
+# ------ Data connection ------
+
+- connect:
+    flow: 's2c_data'
+    peer_flow: 'c2s_data'
+
+- send:
+    flow: 's2c_data'
+    data: '1234567'
+
+- recv:
+    flow: 'c2s_data'
+    match: '1234567'

@@ -1,0 +1,89 @@
+flows:
+  's2c':
+     proto: tcp
+     src: '10.1.1.49'
+     sport: '5060'
+
+  'c2s':
+     proto: tcp
+     src: '192.168.1.49'
+     sport: 'random_num(5000, 8000)'
+     dst: 's2c.src'
+     dport: 's2c.sport'
+
+  # 's2c':
+  #    proto: tcp
+  #    src: '10.5.16.49'
+  #    sport: '5060'
+
+  # 'c2s':
+  #    proto: tcp
+  #    src: '100.100.71.49'
+  #    sport: 'random_num(5000, 8000)'
+  #    dst: 's2c.src'
+  #    dport: 's2c.sport'
+
+
+scenario:
+- send:
+    flow: c2s
+    flags: S
+- recv:
+    flow: s2c
+    flags: S
+    exec:
+    - s2c.dst=pkt[IP].src
+    - s2c.dport=pkt[TCP].sport
+- send:
+    flow: s2c
+    flags: SA
+- recv:
+    flow: c2s
+    flags: SA
+
+- save:
+    body: | 
+      v=0\r\n
+      o=user1 53655765 2353687637 IN IP4 {c2s.src}\r\n
+      s=-\r\n
+      c=IN IP4 {c2s.src}\r\n
+      t=0 0\r\n
+      m=audio 6000 RTP/AVP 0\r\n
+      a=rtpmap:0 PCMU/8000\r\n
+      x-my=0\r\n
+
+- send:
+    flow: c2s
+    data: |
+      INVITE sip:1028@{c2s.dst}:{c2s.dport}  SIP/2.0\r\n
+      Via: SIP/2.0/TCP {c2s.src}:5060;branch=z9hG4bK-12880-1-0\r\n
+      From: 1024 <sip:1024@{c2s.src}:5060>;tag=12880SIPpTag001\r\n
+      To:  <sip:1028@{s2c.src}:{s2c.sport}>\r\n
+      Call-ID: 1-12880@{c2s.src}\r\n
+      CSeq: 1 INVITE\r\n
+      Contact: sip:1024@{c2s.src}:5060\r\n
+      Max-Forwards: 70\r\n
+      Subject: Performance Test 1\r\n
+      Content-Type: application/sdp\r\n
+      Content-Length:   {len(body)}\r\n
+      \r\n
+      {body}
+
+- recv:
+    flow: s2c
+    match: 'INVITE sip:1028@'
+    search: 
+      - 'Via: SIP/2.0/TCP (?P<via_ip>[\d.]+):(?P<via_port>\d+);'
+      - 'Contact:\s*sip:[^@]+@(?P<contact_ip>[\d.]+):(?P<contact_port>\d+)'
+      - 'c=IN IP4 (?P<sdp_c>.*)\r\n'
+      - 'm=audio (?P<sdp_m>[0-9]+) RTP/AVP.*'
+    verify:
+      - is_valid_ip(recv['via_ip'])
+      - is_valid_port(recv['via_port'])
+      - is_valid_ip(recv['contact_ip'])
+      - is_valid_port(recv['contact_port'])
+      - is_valid_ip(recv['sdp_c'])
+      - is_valid_port(recv['sdp_m'])
+- send:
+    flow: s2c
+    flags: 'A'

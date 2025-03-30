@@ -1,0 +1,97 @@
+# INVITE creates 4 predict 
+#   via <== 200 OK
+#   contact <==  PRACK
+#   rtp <== server-rtp
+#   rtcp <== server-rtcp
+# Test conversion of all four
+flows:
+  c2s:
+    proto: udp
+    src: 192.168.61.113
+    sport: 5060
+    dst: params['s2c_src']
+    dport: params['s2c_port']
+  c2s_via:
+    proto: udp
+    src: c2s.src
+    sport: c2s.sport + 10
+  c2s_contact:
+    proto: udp
+    src: c2s.src
+    sport: c2s.sport + 20
+  c2s_rtp:
+    src: c2s.src
+    sport: c2s.sport * 5 
+  c2s_rtcp:
+    src: c2s.src
+    sport: c2s_rtp.sport + 1
+
+scenario:
+- send:
+    flow: c2s
+    data: |-
+      INVITE sip:7405557000@{c2s.dst}:{c2s.dport};user=phone SIP/2.0\r\n
+      Via: SIP/2.0/UDP {c2s_via.src}:{c2s_via.sport};branch=z9hG4bKbe15632f914B3568\r\n
+      From: "7012" <sip:7405557012@{c2s.src}:{c2s.sport}>;tag=BA76D475-4FE052EC\r\n
+      To: <sip:7405557000@{c2s.src}:{c2s.sport};user=phone>\r\n
+      Call-ID: 5a2fb8b1-3c6d8673-82af160a@{c2s.src}00\r\n
+      CSeq: 1 INVITE\r\n
+      Contact: <sip:7405557012@{c2s_contact.src}:{c2s_contact.sport}>\r\n
+      Max-forwards: 70\r\n
+      Content-Type: application/sdp\r\n
+      Content-Length:   247\r\n
+      \r\n
+      v=0\r\n
+      o=- 978385019 978385019 IN IP4 {c2s_rtp.src}\r\n
+      s=Polycom IP Phone\r\n
+      c=IN IP4 {c2s_rtp.src}\r\n
+      t=0 0\r\n
+      a=sendrecv\r\n
+      m=audio {c2s_rtp.sport} RTP/AVP 0 8 18 101\r\n
+      a=rtpmap:0 PCMU/8000\r\n
+      a=rtpmap:8 PCMA/8000\r\n
+      a=rtpmap:18 G729/8000\r\n
+      a=rtpmap:101 telephone-event/8000\r\n
+      \r\n
+
+
+# hits invite via predict
+- recv:
+    flow: c2s_via
+    match: 'SIP/2.0 200 OK'
+    search:
+    - c=IN IP4 (?P<rtp_dst>.*)\r\n
+    - m=audio (?P<rtp_dport>\d+)
+    - 'Contact:\s*<sip:[^@]+@(?P<contact_ip>[\d.]+):(?P<contact_port>\d+)'
+    exec:
+    - c2s_rtp.dst=recv['rtp_dst']
+    - c2s_rtp.dport=recv['rtp_dport']
+    - c2s_rtcp.dst=recv['rtp_dst']
+    - c2s_rtcp.dport="recv['rtp_dport'] + 1"
+    - c2s_contact.dport=recv['contact_port']
+    - c2s_contact.dst=recv['contact_ip']
+
+
+# directed to 200 contact predict
+- send:
+    flow: c2s_contact
+    data: |-
+      ACK sip:7405557000@{c2s.dst}:{c2s.dport};user=phone SIP/2.0\r\n
+      Via: SIP/2.0/UDP {c2s_via.src}:{c2s_via.sport};branch=z9hG4bKbe15632f914B3568\r\n
+      From: "7012" <sip:7405557012@{c2s.src}:{c2s.sport}>;tag=BA76D475-4FE052EC\r\n
+      To: <sip:7405557000@{c2s.src}:{c2s.sport};user=phone>\r\n
+      Call-ID: 5a2fb8b1-3c6d8673-82af160a@{c2s.src}00\r\n
+      CSeq: 1 ACK\r\n
+      Max-forwards: 70\r\n
+      Content-Length: 0\r\n
+      \r\n
+
+- recv:
+    flow: c2s_rtp
+    l7-proto: "RTP"
+
+    
+- recv:
+    flow: c2s_rtcp
+    match: '1234567'
+

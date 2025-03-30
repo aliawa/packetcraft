@@ -1,0 +1,90 @@
+flows:
+  # Source nat testing
+  's2c':
+    src: 10.1.1.49
+    sport: 5060
+
+  'c2s':
+    src: 192.168.1.49
+    sport: 5060
+    dst: s2c.src
+    dport: s2c.sport
+
+
+scenario:
+- send:
+    flow: c2s
+    flags: S
+- recv:
+    flow: s2c
+    flags: S
+    exec:
+      - s2c.dst=pkt.src
+      - s2c.dport=pkt.sport
+- send:
+    flow: s2c
+    flags: SA
+- recv:
+    flow: c2s
+    flags: SA
+
+- send:
+    flow: c2s
+    data: |-
+      INVITE sip:7405557000@{c2s.dst}:{c2s.dport};user=phone SIP/2.0\r\n
+      Via: SIP/2.0/UDP {c2s.src}:{c2s.sport};branch=z9hG4bKbe15632f914B3568\r\n
+      From: "7012" <sip:7405557012@{s2c.src}:{s2c.sport}>;tag=BA76D475-4FE052EC\r\n
+      To: <sip:7405557000@{s2c.src}:{s2c.sport}>\r\n
+      Call-ID: 5a2fb8b1-3c6d8673-82af160a@{c2s.src}00\r\n
+      CSeq: 1 INVITE\r\n
+      Max-forwards: 70\r\n
+      Content-Type: application/sdp\r\n
+      Content-Length:   247\r\n
+      \r\n
+
+- recv:
+    flow: s2c
+    match: INVITE.*
+    search:
+      - 'Via: (?P<via>.*)\r\n'
+      - 'Via: SIP/2.0/UDP (?P<client_ip>[\d.]+):(?P<client_port>\d+);'
+      - 'From: (?P<from>.*)\r\n'
+      - 'To: (?P<to>.*)\r\n'
+
+- send:
+    flow: s2c
+    flags: 'A'
+
+- recv:
+    flow: c2s
+    flags: 'A'
+
+- send:
+    flow: c2s
+    data: |-
+         v=0\r\n
+         o=- 978385019 978385019 IN IP4 {c2s_rtp.src}\r\n
+         s=Polycom IP Phone\r\n
+         c=IN IP4 {c2s_rtp.src}\r\n
+         t=0 0\r\n
+         a=sendrecv\r\n
+         m=audio {c2s_rtp.sport} RTP/AVP 0 8 18 101\r\n
+         a=rtpmap:0 PCMU/8000\r\n
+         a=rtpmap:8 PCMA/8000\r\n
+         a=rtpmap:18 G729/8000\r\n
+         a=rtpmap:101 telephone-event/8000
+
+- recv:
+    flow: s2c
+    search: 
+      - 'c=IN IP4 (?P<sdp_c>.*)\r\n'
+      - 'm=audio (?P<sdp_m>\d{4,5}) RTP/AVP'
+
+- send:
+    flow: s2c
+    flags: 'A'
+
+- recv:
+    flow: c2s
+    flags: 'A'
+

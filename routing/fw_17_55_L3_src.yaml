@@ -1,0 +1,14 @@
+# next-hop and egress interface for each source ip
+'routing':
+  '192.168.1.49/32':
+      next-hop: 00:50:56:9c:74:a3 
+      dev: ens192
+  '10.1.1.49/32':
+      next-hop: 00:50:56:9c:75:cd
+      dev: ens224
+
+# Local interfaces and their assigned ip addresses
+'interfaces':
+   'ens192': ['192.168.1.49']
+   'ens224': ['10.1.1.49']
+    
