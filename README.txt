@@ -104,21 +104,18 @@ When receive fails, exception is thrown to indicate that the test has failed
 Dictionaries avaialable for commands
 ----------------------------------------------------------------------
     dicts:
-        - c2s
-        - s2c
-        - ...
-        - pkt
-            - src
-            - dst
-            - sport
-            - dport
-            - proto
-            - flags
-        - payload
-            - all searched fields
-            - len : autopopulated
-        - param
-            - the param dictionary imported from command line
+        recv:
+            All search terms are in this dictionary
+            for example recv['rtp_dst']
+        params
+            loaded from -p <f.yaml>
+            params['dst']
+
+    objects:
+        All flow names become global objects
+        c2s.dst
+        s2c.src 
+
 
 Example usage of dictionaries:
     statement                       Meaning
