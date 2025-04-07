@@ -124,6 +124,16 @@ Dictionaries avaialable for commands
         All flow names become global objects
         c2s.dst
         s2c.src 
+    dicts:
+        search fields will go into the global dict 'recv' by default
+        if the search field is 'rtp_port' then it will be accessed as recv['rtp_port']
+        if the recv action has a name then the search field will go in the named dict
+        for example if the recv action is named inv then the field will be accessed as inv['dport']
+
+Define a new variable 
+execute: 
+    - global cid; cid=random_num(10,99)
+
 
 
 Example usage of dictionaries:
@@ -381,6 +391,18 @@ Out of order packets
 TODO, 
 
 
+Example of sending binary packet
+----------------------------------------------------------------------
+- delay:
+    timeout: 100
+- send:
+    flow: s2c_rtp
+    data: !!binary |
+      gAjnBwAAClDe4O6P1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
+      1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
+      1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
+      1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
+      1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
 
 
 #--------------------------------------------------------------------#
@@ -437,5 +459,7 @@ Helper functions:
     random_num(a, b)     # returns random number N such that a <= N <= b
     is_valid_ip4(string)
     is_valid_port(int)
+
+
 
 
