@@ -129,7 +129,6 @@ def log_action(act, fl, pkt):
         lod = pkt[Raw].load
         printable_chars = set(bytes(string.printable, 'ascii'))
         printable = all(char in printable_chars for char in lod)
-
         if printable:
             actlog.info("{:<6}{:<15}{}".format(prefix, s, lod.decode('utf8').splitlines()[0][:26]))
         else:
@@ -255,7 +254,8 @@ def l7_match(pkt, fl, act):
 def flds_eval(exp):
     try:
         return eval(exp)
-    except:
+    except Exception as e:
+        genlog.debug(e)
         return exp
 
 
