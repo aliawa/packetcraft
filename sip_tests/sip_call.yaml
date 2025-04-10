@@ -36,6 +36,9 @@ flows:
 
 
 scenario:
+- execute:
+  - global cid; cid=random_num(10,99)
+
 - save:
     body: |
          v=0\r\n
@@ -57,7 +60,7 @@ scenario:
          Via: SIP/2.0/{c2s.proto.upper()} {c2s.src}:{c2s.sport};branch=z9hG4bKbe15632f914B3568\r\n
          From: "7012" <sip:7405557012@{s2c.src}:{s2c.sport}>;tag=BA76D475-4FE052EC\r\n
          To: <sip:7405557000@{s2c.src}:{s2c.sport}>\r\n
-         Call-ID: 5a2fb8b1-3c6d8673-82af160a@{c2s.src}00\r\n
+         Call-ID: 5a2fb8b1-3c6d8673-82af160a@{c2s.src}{cid}\r\n
          CSeq: 1 INVITE\r\n
          Max-forwards: 70\r\n
          Content-Type: application/sdp\r\n
@@ -77,9 +80,11 @@ scenario:
     - m=audio (?P<rtp_dport>\d+)
     exec:
     - s2c_rtp.dst=recv['rtp_dst']
-    - s2c_rtp.dport=recv['rtp_dport']
+    - s2c_rtp.dport=int(recv['rtp_dport'])
     - s2c.dst=recv['client_ip']
     - s2c.dport=recv['client_port']
+    - s2c_rtcp.dst=recv['rtp_dst']
+    - s2c_rtcp.dport=s2c_rtp.dport + 1
 
 - save:
     resp_body: |
@@ -101,7 +106,7 @@ scenario:
         Via: {recv['via']}\r\n
         From: {recv['from']}\r\n
         To: {recv['to']};tag=SERVER-4FE052EC\r\n
-        Call-ID: 5a2fb8b1-3c6d8673-82af160a@{c2s.src}00\r\n
+        Call-ID: 5a2fb8b1-3c6d8673-82af160a@{c2s.src}{cid}\r\n
         CSeq: 1 INVITE\r\n
         Contact: <sip:9200014@{s2c_contact.src}:{s2c_contact.sport}>\r\n
         Content-Type: application/sdp\r\n
@@ -131,7 +136,7 @@ scenario:
          Via: SIP/2.0/UDP {c2s.src}:{c2s.sport};branch=z9hG4bKbe\r\n
          From: "7012" <sip:7405557012@{s2c.src}:{s2c.sport}>;tag=BA76D475-4FE052EC\r\n
          To: <sip:7405557000@{s2c.src}:{s2c.sport}>;tag=SERVER-4FE052EC\r\n
-         Call-ID: 5a2fb8b1-3c6d8673-82af160a@{c2s.src}00\r\n
+         Call-ID: 5a2fb8b1-3c6d8673-82af160a@{c2s.src}{cid}\r\n
          CSeq: 1 ACK\r\n
          Max-forwards: 70\r\n
          Content-Length: 0\r\n
@@ -153,9 +158,9 @@ scenario:
     l7-proto: "RTP"
 
 - send:
-    flow: c2s_rtcp
+    flow: s2c_rtcp
     data:  '1234567'
 
 - recv:
-    flow: s2c_rtcp
+    flow: c2s_rtcp
     match: '1234567'

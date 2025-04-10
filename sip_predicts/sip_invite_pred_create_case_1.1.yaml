@@ -17,7 +17,7 @@ flows:
     sport: s2c.sport + 10
   s2c_rtp:
     src: s2c.src
-    sport: 'random(28000-29000)'
+    sport: 'random_num(28000, 29000)'
   s2c_rtcp:
     src: s2c.src
     sport: s2c_rtp.sport + 1
@@ -25,7 +25,7 @@ flows:
   c2s:
     proto: udp
     src: 192.168.2.1
-    sport: 'random(5000-6000)'
+    sport: 'random_num(5000, 6000)'
     dst: s2c.src
     dport: s2c.sport
   c2s_via:
@@ -36,7 +36,7 @@ flows:
     sport: c2s_via.sport
   c2s_rtp:
     src: c2s.src
-    sport: 'random(27000-28000)'
+    sport: 'random_num(27000, 28000)'
   c2s_rtcp:
     src: c2s.src
     sport: c2s_rtp.sport + 1
@@ -67,10 +67,10 @@ scenario:
     - 'To: (?P<to>.*)\r\n'
     - 'Contact:\s*<sip:[^@]+@(?P<contact_ip>[\d.]+):(?P<contact_port>\d+)'
     exec:
-    - s2c_via.dst=via_ip
-    - s2c_via.dport=via_port
-    - s2c_contact.dst=contact_ip
-    - s2c_contact.dport=contact_port
+    - s2c_via.dst=recv['via_ip']
+    - s2c_via.dport=recv['via_port']
+    - s2c_contact.dst=recv['contact_ip']
+    - s2c_contact.dport=recv['contact_port']
 
 
       # directed to via predict
@@ -78,9 +78,9 @@ scenario:
     flow: s2c_via
     data: |-
         SIP/2.0 200 OK\r\n
-        Via: {via}\r\n
-        From: {from}\r\n
-        To: {to}\r\n
+        Via: {recv['via']}\r\n
+        From: {recv['from']}\r\n
+        To: {recv['to']}\r\n
         Call-ID: 6978DD1F-3937-40BF-89F8-A423F8DBDE5F-384@10.14.201.40\r\n
         CSeq: 1 INVITE\r\n
         Contact: <sip:9200014@{s2c.src}:{s2c.sport}>\r\n
@@ -106,12 +106,12 @@ scenario:
     - m=audio (?P<rtp_dport>\d+)
     - 'Contact:\s*<sip:[^@]+@(?P<contact_ip>[\d.]+):(?P<contact_port>\d+)'
     exec:
-    - c2s_rtp.dst=rtp_dst
-    - c2s_rtp.dport=rtp_dport
-    - c2s_rtcp.dst=rtp_dst
-    - c2s_rtcp.dport=rtp_dport + 1
-    - c2s_contact.dport=pkt.sport
-    - c2s_contact.dst=pkt.src
+    - c2s_rtp.dst=recv['rtp_dst']
+    - c2s_rtp.dport=recv['rtp_dport']
+    - c2s_rtcp.dst=recv['rtp_dst']
+    - c2s_rtcp.dport=int(recv['rtp_dport']) + 1 
+    - c2s_contact.dport=pkt[UDP].sport
+    - c2s_contact.dst=pkt[IP].src
 
 
       # directed to invite contact predict

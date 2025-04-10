@@ -2,29 +2,32 @@
 flows:
   'c2s':
      proto: udp
-     src: 192.168.1.1
-     sport: 5050
-     dst: 10.1.1.1
+     src: 192.168.1.49
+     sport: 6060
+     dst: 10.1.1.49
      dport: 5060
 
   's2c':
      proto: udp
-     src: 10.1.1.1
+     src: 10.1.1.49
      sport: 5060
-     dst: 192.168.1.1
-     dport: 5050
+
+
 
 scenario: 
+- execute:
+  - global cid; cid = random_num(10,99)
+
 - send:
     flow: 'c2s'
     data: |-
-      REGISTER sip:7405557000@10.1.1.1:5060;user=phone SIP/2.0\r\n
-      Via: SIP/2.0/UDP 192.168.1.1:5090;branch=z9hG4bKbe15632f914B3568\r\n
-      From: "7012" <sip:7405557012@10.1.1.1:5060>;tag=BA76D475-4FE052EC\r\n
-      To: <sip:7405557000@10.1.1.1:5060;user=phone>\r\n
-      Call-ID: 5a2fb8b1-3c6d8673-82af160a@192.168.1.100\r\n
+      REGISTER sip:7405557000@{c2s.dst}:{c2s.dst};user=phone SIP/2.0\r\n
+      Via: SIP/2.0/UDP {c2s.src}:{c2s.sport+10};branch=z9hG4bKbe15632f914B3568\r\n
+      From: "7012" <sip:7405557012@{c2s.dst}:{c2s.dport}>;tag=BA76D475-4FE052EC\r\n
+      To: <sip:7405557000@{c2s.dst}:{c2s.dport};user=phone>\r\n
+      Call-ID: 5a2fb8b1-3c6d8673-82af160a@{c2s.src}-{cid}\r\n
       CSeq: 1 REGISTER\r\n
-      Contact: <sip:7405557012@192.168.1.1:7060>\r\n
+      Contact: <sip:7405557012@{c2s.src}:{c2s.sport+20}>\r\n
       User-agent: PolycomSoundPointIP-SPIP_501-UA/2.0.2.0076\r\n
       Supported: 100rel\r\n
       Max-forwards: 70\r\n

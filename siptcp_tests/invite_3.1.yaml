@@ -1,15 +1,21 @@
 flows:
-  'c2s':
-     proto: tcp
-     src: 192.168.0.113
-     sport: 'random'
-     dst: 12.0.2.114
-     dport: 5060
-
   's2c':
      proto: tcp
-     src: 12.0.2.114
-     sport: 5060
+     src: '10.1.1.49'
+     sport: '5060'
+
+  'c2s':
+     proto: tcp
+     src: '192.168.1.49'
+     sport: 'random_num(5000, 8000)'
+     dst: 's2c.src'
+     dport: 's2c.sport'
+
+  'c2s_rtp':
+    proto: udp
+    src: 'c2s.src'
+    sport: '6000'
+
 
 scenario:
 - send:
@@ -19,8 +25,8 @@ scenario:
     flow: s2c
     flags: S
     exec:
-    - s2c.dst=pkt.src
-    - s2c.dport=pkt.sport
+    - s2c.dst=pkt[IP].src
+    - s2c.dport=pkt[TCP].sport
 - send:
     flow: s2c
     flags: SA
@@ -32,31 +38,40 @@ scenario:
     data: |-
       INVITE sip:1028@12.0.2.114:5060 SIP/2.0\r\n
       Via: SIP/2.0/T
+
+- execute:
+  - cid=random_num(1,99)
+
 - recv:
     flow: s2c
     match: 'INVITE sip:1028@{param.ruri_ip}:{param.ruri_port} SIP/2.0'
+
+- save:
+    body: |
+      v=0\r\n
+      o=user1 53655765 2353687637 IN IP4 {c2s.src}\r\n
+      s=-\r\n
+      c=IN IP4 {c2s.src}\r\n
+      t=0 0\r\n
+      m=audio {c2s_rtp.sport} RTP/AVP 0\r\n
+      a=rtpmap:0 PCMU/8000\r\n
 - send:
     flow: c2s
     data: |
-      CP 192.168.0.113:5060;branch=z9hG4bK-12880-1-0\r\n
-      From: 1024 <sip:1024@192.168.0.113:5060>;tag=12880SIPpTag001\r\n
-      To:  <sip:1028@12.0.2.114:5060>\r\n
-      Call-ID: 1-12880@192.168.0.113\r\n
+    flow: c2s
+    data: |
+      CP {c2s.src}:5060;branch=z9hG4bK-12880-1-0\r\n
+      From: 1024 <sip:1024@{c2s.src}:5060>;tag=12880SIPpTag001\r\n
+      To:  <sip:1028@{s2c.src}:{s2c.sport}>\r\n
+      Call-ID: {cid}-12880@{c2s.src}\r\n
       CSeq: 1 INVITE\r\n
-      Contact: sip:1024@192.168.0.113:5060\r\n
+      Contact: sip:1024@{c2s.src}:5060\r\n
       Max-Forwards: 70\r\n
-      Subject: Performance Test 3.1\r\n
+      Subject: Performance Test 1\r\n
       Content-Type: application/sdp\r\n
-      Content-Length:   145\r\n
+      Content-Length: {len(body)}\r\n
       \r\n
-      v=0\r\n
-      o=user1 53655765 2353687637 IN IP4 192.168.0.113\r\n
-      s=-\r\n
-      c=IN IP4 192.168.0.113\r\n
-      t=0 0\r\n
-      m=audio 6000 RTP/AVP 0\r\n
-      a=rtpmap:0 PCMU/8000\r\n
-      x-my=0\r\n
+      {body}
 - recv:
     flow: s2c
     search: 
