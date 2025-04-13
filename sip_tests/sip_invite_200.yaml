@@ -8,11 +8,11 @@ flows:
 
   # Source nat testing
   's2c':
-    src: '10.1.16.49'
+    src: 192.168.200.222
     sport: '5060'
 
   'c2s':
-    src: '192.168.16.49' 
+    src: 192.168.100.111
     sport: 'random_num(5000, 7000)'
     dst: s2c.src
     dport: s2c.sport
@@ -30,6 +30,10 @@ flows:
 
 
 scenario:
+- connect:
+    flow: c2s
+    peer_flow: s2c
+
 - save:
     body: |
          v=0\r\n

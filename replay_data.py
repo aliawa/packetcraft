@@ -49,8 +49,8 @@ def is_valid_port(port):
 # -----------------------------------------------------------
 
 class Flow:
-    def __init__(self, fl):
-        self.proto   = fl['proto'] if 'proto' in fl else 'udp'
+    def __init__(self, fl, arg_proto):
+        self.proto   = fl['proto'] if 'proto' in fl else arg_proto
         self.src     = flds_eval(fl['src'])
         self.intf    = ip2dev(self.src)
         self.src_mac = ip2mac(self.src)
@@ -675,7 +675,7 @@ def setup_logging(log_level):
 def init(logl):
     setup_logging(logl)
 
-def setup(scenario_f, routes_f, route_type, params_f, pcap_f):
+def setup(scenario_f, routes_f, route_type, params_f, pcap_f, proto):
     # global dicts
     global routing
     global routing_type
@@ -713,7 +713,7 @@ def setup(scenario_f, routes_f, route_type, params_f, pcap_f):
     hosts = set()
     flows = {}
     for name, fl in scen_dict['flows'].items():
-        flobj = Flow(fl)
+        flobj = Flow(fl, proto)
         globals()[name]= flobj
         flows[name]= flobj
         intfs.add(flobj.intf)
@@ -746,6 +746,7 @@ if __name__ == '__main__':
     parser.add_argument('-l', '--log',      metavar='', choices=['DEBUG','INFO','WARNING','ERROR','CRITICAL'], help='Set logging level {%(choices)s}', default='CRITICAL')
     parser.add_argument('-p', '--params',   metavar='', help='parameter file')
     parser.add_argument('-s', '--savepcap', action='store_true', help='save pcap file')
+    parser.add_argument('-pr','--proto',    metavar='', choices=['TCP','UDP','udp','tcp'], help='Set transport protocol', default='UDP')
 
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('-sr', '--src_routes', help='source based routing file .yaml')
@@ -768,9 +769,9 @@ if __name__ == '__main__':
 
     try:
         if args.src_routes:
-            scenario = setup(args.testfile, args.src_routes, Routing.source, args.params, fname)
+            scenario = setup(args.testfile, args.src_routes, Routing.source, args.params, fname, args.proto)
         else:
-            scenario = setup(args.testfile, args.dst_routes, Routing.dest, args.params, fname)
+            scenario = setup(args.testfile, args.dst_routes, Routing.dest, args.params, fname, args.proto)
         
     except KeyError as inst:
         genlog.critical ("KeyError: {}".format(inst))

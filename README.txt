@@ -6,10 +6,10 @@
 
 Required Modules
 ----------------------------------------------------------------------
-pip
-scapy
+pip		    apt install python3-pip
+scapy	    apt install python3-scapy
 pyyaml
-textwrap3
+textwrap3	python3 -m pip install textwrap3
 
 
 Need for a protocol traffic generator
@@ -403,6 +403,12 @@ Example of sending binary packet
       1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
       1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
       1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
+
+
+Options
+----------------------------------------------------------------------
+-pr 
+    Specify transport protocol. It can be specified as 'udp' or 'tcp'
 
 
 #--------------------------------------------------------------------#
