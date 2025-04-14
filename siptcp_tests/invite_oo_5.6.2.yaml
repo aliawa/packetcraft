@@ -1,0 +1,98 @@
+flows:
+  's2c':
+     proto: tcp
+     src: '10.1.1.49'
+     sport: '5060'
+
+  'c2s':
+     proto: tcp
+     src: '192.168.1.49'
+     sport: 'random_num(5000, 8000)'
+     dst: 's2c.src'
+     dport: s2c.sport
+
+scenario:
+- send:
+    flow: c2s
+    flags: S
+- recv:
+    flow: s2c
+    flags: S
+    exec:
+    - s2c.dst=pkt[IP].src
+    - s2c.dport=pkt[TCP].sport
+- send:
+    flow: s2c
+    flags: SA
+- recv:
+    flow: c2s
+    flags: SA
+
+- save:
+    body1: | 
+      v=0\r\n
+      o=user1 53655765 2353687637 IN IP4 {c2s.src}\r\n
+      s=-\r\n
+      c=IN IP4 {c2s.src[:2]}
+    body2: |
+      {c2s.src[3:]}\r\n
+      t=0 0\r\n
+      m=audio {random_num(10000,15000)} RTP/AVP 0\r\n
+      a=rtpmap:0 PCMU/8000\r\n
+
+- create:
+    flow: c2s
+    name: 'invite'
+    data: |
+      INVITE sip:1028@{c2s.dst}:{c2s.dport}  SIP/2.0\r\n
+      Via: SIP/2.0/TCP {c2s.src}:5060;branch=z9hG4bK-12880-1-0\r\n
+      From: 1024 <sip:1024@{c2s.src}:5060>;tag=12880SIPpTag001\r\n
+      To:  <sip:1028@{s2c.src}:{s2c.sport}>\r\n
+      Call-ID: 1-12880@{c2s.src}\r\n
+      CSeq: 1 INVITE\r\n
+      Contact: sip:1024@{c2s.src}:5060\r\n
+      Max-Forwards: 70\r\n
+      Subject: Performance Test 5.6\r\n
+      Content-Type: application/sdp\r\n
+      Content-Length:   {len(body1)+len(body2)}\r\n
+      \r\n
+
+- create:
+    flow: c2s
+    name: 'sdp-1'
+    data: '{body1}'
+
+- create:
+    flow: c2s
+    name: 'sdp-2'
+    data: '{body2}'
+
+- send:
+    flow: c2s
+    name: 'sdp-2'
+- delay:
+    timeout: 5
+
+- send:
+    flow: c2s
+    name: 'sdp-1'
+- delay:
+    timeout: 5
+
+- send:
+    flow: c2s
+    name: 'invite'
+- recv:
+    flow: s2c
+    match: 'INVITE sip:1028@[^:]+:[\d]{0,4}\s+SIP/2.0'
+    search: 
+      - 'SIP/2.0/TCP (?P<via_ip>[\d.]+):(?P<via_port>\d+);'
+      - 'Contact:\s*sip:[^@]+@(?P<contact_ip>[\d.]+):(?P<contact_port>\d+)'
+    verify:
+      - is_valid_ip(recv['via_ip'])
+      - is_valid_port(recv['via_port'])
+      - is_valid_ip(recv['contact_ip'])
+      - is_valid_port(recv['contact_port'])
+- send:
+    flow: s2c
+    flags: 'A'
