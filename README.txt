@@ -393,6 +393,7 @@ TODO,
 
 Example of sending binary packet
 ----------------------------------------------------------------------
+rtp packet it processed using "base64 rtp.bin > rtp.txt"
 - delay:
     timeout: 100
 - send:
