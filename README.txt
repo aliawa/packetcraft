@@ -4,6 +4,7 @@
 |                                                                    |
 *--------------------------------------------------------------------*
 
+
 Required Modules
 ----------------------------------------------------------------------
 pip		    apt install python3-pip
@@ -56,7 +57,8 @@ Fields can be inserted that were extracted from the received packets.
 If the spaces are important in the data, for example in case of formated xml
 use "data: |", otherwise use "data: |-". "|-" will strip extra white spaces
 
-use "data: |2" to tell how many indent spaces
+use "data: |2" to tell how many indent spaces, this is usefull if the payload starts
+with spaces
 Example: 
 - send:
     flow: c2s
@@ -87,7 +89,7 @@ flows:
   'c2s':
      proto: tcp
      src: 192.168.0.113
-     sport: 'random'
+     sport: 'random_num(6000, 8000)'
 
 
 
@@ -103,34 +105,38 @@ When receive fails, exception is thrown to indicate that the test has failed
 
 Dictionaries avaialable for commands
 ----------------------------------------------------------------------
-    dicts:
-        - c2s
-        - s2c
-        - ...
-        - pkt
-            - src
-            - dst
-            - sport
-            - dport
-            - proto
-            - flags
-        - payload
-            - all searched fields
-            - len : autopopulated
-        - param
-            - the param dictionary imported from command line
-
     objects:
         All flow names become global objects
         c2s.dst
         s2c.src 
-    dicts:
+
+    recv dicts:
+        recv[]:
         search fields will go into the global dict 'recv' by default
         if the search field is 'rtp_port' then it will be accessed as recv['rtp_port']
         if the recv action has a name then the search field will go in the named dict
         for example if the recv action is named inv then the field will be accessed as inv['dport']
 
-Define a new variable 
+        pkt: 
+        The last received packet. All scapy accessors will work
+               pkt[Raw].len 
+               pkt[IP].src
+               pkt[TCP].sport
+        param:
+            the param dictionary specified by "-p params.yaml" on the command line
+            match: 'REGISTER sip:{param.ruri_ip} SIP/2.0'
+
+
+Helper functions:
+----------------------------------------------------------------------
+    random_num(a, b)     # returns random number N such that a <= N <= b
+    is_valid_ip4(string)
+    is_valid_port(int)
+
+
+
+Define a new global variable 
+----------------------------------------------------------------------
 execute: 
     - global cid; cid=random_num(10,99)
 
@@ -239,6 +245,7 @@ Commands
       t=0 0\r\n
       m=audio {random_num(10000,15000)} RTP/AVP 0\r\n
       a=rtpmap:0 PCMU/8000\r\n
+
 
 Implementation
 ----------------------------------------------------------------------
@@ -412,11 +419,26 @@ Options
     Specify transport protocol. It can be specified as 'udp' or 'tcp'
 
 
+
+Logging
+----------------------------------------------------------------------
+all sent a received packets are logged in packet.log whenb level DEBUG
+is set
+
+
+
+
 #--------------------------------------------------------------------#
 |                                                                    |
-|                       tcp_list_dataflow.py                         |
+|                       pcap_dump_flow.py                            |
 |                                                                    |
 #--------------------------------------------------------------------#
+
+Required Modules
+----------------------------------------------------------------------
+ruamel                          apt install python3-ruamel.yaml
+
+
 
 python3 tcp_list_dataflow.py -pc 3286 -ipc 192.168.1.49 -o flow_c2s -r rx tx
 
@@ -444,29 +466,101 @@ Output with sip_call using proxy. -flow_c2s
 
 
 
+
+
+
 #--------------------------------------------------------------------#
 |                                                                    |
-|                       replay_data.py  v3.0                         |
+|                          pcap_dump_sip.py                          |
 |                                                                    |
 #--------------------------------------------------------------------#
 
-Global variables
-    - All flows: c2s, s2c etc.
-    - pkt
-    - pkt[Raw].len is available
+dependency:
+    sip-parser      alxgb/sip-parser
+    pip install sip-parser/src/sip_parser
 
-recv action:
-    if a "name: <name>" is provided then search fields can be accessed as
-        <name>['field_name']
-    otherwise search fields will be accessed as recv['field_name']
+Usage:
+    pcap_dump_sip.py rx.pcap --sip "Call-ID=0022905c-59680003-b6a0cb24-b0fc6828@192.168.30.151"
 
-The global 'pkt' always points to last received packet
+Other fields that can be searched. See the message below and there parsed version 
+    REFER sip:192.168.40.135 SIP/2.0^M
+    Via: SIP/2.0/UDP 192.168.30.151:5060;branch=z9hG4bK4eb7d4e8^M
+    From: <sip:0022905c5968@192.168.30.151>;tag=0022905c596800046fa3b5e4-7985c768^M
+    To: <sip:192.168.40.135>^M
+    Call-ID: 0022905c-59680003-b6a0cb24-b0fc6828@192.168.30.151^M
+    Date: Wed, 30 Apr 2025 19:13:48 GMT^M
+    CSeq: 1000 REFER^M
+    User-Agent: Cisco-CP7962G/9.4.2^M
+    Expires: 10^M
+    Max-Forwards: 70^M
+    Contact: <sip:0022905c5968@192.168.30.151:5060>^M
+    Require: norefersub^M
+    Referred-By: <sip:0022905c5968@192.168.30.151>^M
+    Refer-To: cid:5610f564@192.168.30.151^M
+    Content-Id: <5610f564@192.168.30.151>^M
+    Allow: ACK,BYE,CANCEL,INVITE,NOTIFY,OPTIONS,REFER,REGISTER,UPDATE,SUBSCRIBE^M
+    Content-Length: 1313^M
+    Content-Type: application/x-cisco-alarm+xml^M
+    Content-Disposition: session;handling=required^M
 
-Helper functions:
-    random_num(a, b)     # returns random number N such that a <= N <= b
-    is_valid_ip4(string)
-    is_valid_port(int)
+
+    {
+        'via': [{'version': '2.0', 'protocol': 'UDP', 'host': '192.168.30.151', 'port': 5060, 'params': {'branch': 'z9hG4bK4eb7d4e8'}}], 
+        'from': {'name': None, 'uri': 'sip:0022905c5968@192.168.30.151', 'params': {'tag': '0022905c596800046fa3b5e4-7985c768'}}, 
+        'to': {'name': None, 'uri': 'sip:192.168.40.135', 'params': {}}, 
+        'call-id': '0022905c-59680003-b6a0cb24-b0fc6828@192.168.30.151', 
+        'date': 'Wed, 30 Apr 2025 19:13:48 GMT', 
+        'cseq': {'seq': 1000, 'method': 'REFER'}, 
+        'user-agent': 'Cisco-CP7962G/9.4.2', 
+        'expires': '10', 
+        'max-forwards': 70, 
+        'contact': [{'name': None, 'uri': 'sip:0022905c5968@192.168.30.151:5060', 'params': {}}], 
+        'require': 'norefersub', 
+        'referred-by': '<sip:0022905c5968@192.168.30.151>', 
+        'refer-to': {'name': None, 'uri': 'cid:5610f564@192.168.30.151', 'params': {}}, 
+        'content-id': '<5610f564@192.168.30.151>', 
+        'allow': 'ACK,BYE,CANCEL,INVITE,NOTIFY,OPTIONS,REFER,REGISTER,UPDATE,SUBSCRIBE', 
+        'content-length': 1313, 
+        'content-type': 'application/x-cisco-alarm+xml', 
+        'content-disposition': 'session;handling=required'
+    }
+
+
+
+    SIP/2.0 202 Accepted^M
+    Via: SIP/2.0/UDP 192.168.40.151:27859;branch=z9hG4bK4eb7d4e8^M
+    From: <sip:0022905c5968@192.168.40.151:27859>;tag=0022905c596800046fa3b5e4-7985c768^M
+    To: <sip:192.168.40.135>;tag=1198734326^M
+    Date: Wed, 30 Apr 2025 19:13:48 GMT^M
+    Call-ID: 0022905c-59680003-b6a0cb24-b0fc6828@192.168.30.151^M
+    CSeq: 1000 REFER^M
+    Contact: <sip:192.168.40.135:5060>^M
+    Content-Length: 0^M
+    ^M
+
+    {
+        'via'            : [{'version': '2.0', 'protocol': 'UDP', 'host': '192.168.40.151', 'port': 27859, 'params': {'branch': 'z9hG4bK4eb7d4e8'}}],
+        'from'           : {'name': None, 'uri': 'sip:0022905c5968@192.168.40.151:27859', 'params': {'tag': '0022905c596800046fa3b5e4-7985c768'}}, 
+        'to'             : {'name': None, 'uri': 'sip:192.168.40.135', 'params': {'tag': '1198734326'}}, 
+        'date'           : 'Wed, 30 Apr 2025 19:13:48 GMT', 
+        'call-id'        : '0022905c-59680003-b6a0cb24-b0fc6828@192.168.30.151', 
+        'cseq'           : {'seq': 1000, 'method': 'REFER'}, 
+        'contact'        : [{'name': None, 'uri': 'sip:192.168.40.135:5060', 'params': {}}], 
+        'content-length' : 0
+    }
 
 
 
 
+#--------------------------------------------------------------------#
+|                                                                    |
+|                          pcap_dump_payload.py                      |
+|                                                                    |
+#--------------------------------------------------------------------#
+
+Usage:
+    pcap_dump_payload.py <pcap-file>
+
+Dumps the payload of all packets that have payload
+Replaces <NL> and <CR> in payload with \r and \n
+     

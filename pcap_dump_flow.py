@@ -39,6 +39,7 @@ from ruamel.yaml import YAML
 cmdln_parsr = argparse.ArgumentParser()
 cmdln_parsr.add_argument('rx')
 cmdln_parsr.add_argument('tx')
+cmdln_parsr.add_argument('-p','--proto', choices=['udp','tcp'])
 cmdln_parsr.add_argument('-pc','--clntport', type=int, required=True)
 cmdln_parsr.add_argument('-ps','--srvrport', type=int)
 cmdln_parsr.add_argument('-ipc','--clntip', required=True)
@@ -63,15 +64,27 @@ if not args.srvrport_n:
     args.srvrport_n = args.srvrport
 
 
-def rxfilter(args, p):
+def rxfilter_tcp(args, p):
     if  TCP in p:
         if (p[IP].src == args.clntip and p[TCP].sport == args.clntport) or (p[IP].dst == args.clntip_n and p[TCP].dport == args.clntport_n) :
             return True
     return False
 
-def txfilter(args, p):
+def txfilter_tcp(args, p):
     if  TCP in p:
         if (p[IP].src == args.clntip_n and p[TCP].sport == args.clntport_n) or (p[IP].dst == args.clntip and p[TCP].dport == args.clntport) :
+            return True
+    return False
+
+def rxfilter_udp(args, p):
+    if  UDP in p:
+        if (p[IP].src == args.clntip and p[UDP].sport == args.clntport) or (p[IP].dst == args.clntip_n and p[UDP].dport == args.clntport_n) :
+            return True
+    return False
+
+def txfilter_udp(args, p):
+    if  UDP in p:
+        if (p[IP].src == args.clntip_n and p[UDP].sport == args.clntport_n) or (p[IP].dst == args.clntip and p[UDP].dport == args.clntport) :
             return True
     return False
 
@@ -90,9 +103,14 @@ class FlowState:
     def update(self, pkt, nxt):
         seq_flg= " "
         ack_flg= " "
-        cur_plen = len(pkt[TCP].payload) if Raw in pkt else 0
-        cur_seq  = pkt[TCP].seq
-        cur_ack  = pkt[TCP].ack
+        if TCP in pkt:
+            cur_plen = len(pkt[TCP].payload) if Raw in pkt else 0
+            cur_seq  = pkt[TCP].seq
+            cur_ack  = pkt[TCP].ack
+        else:
+            cur_plen = len(pkt[UDP].payload) if Raw in pkt else 0
+            cur_seq  = 0
+            cur_ack  = 0
 
         if self.flg_init:
             if self.expected != cur_seq:
@@ -132,15 +150,24 @@ class MyPackt:
     ack_flg: str = " "
 
     def __post_init__(self, args, pcap):
+        sport = None
+        dport = None
+        if TCP in self.spkt:
+            sport = self.spkt[TCP].sport 
+            dport = self.spkt[TCP].dport 
+        elif UDP in self.spkt:
+            sport = self.spkt[UDP].sport 
+            dport = self.spkt[UDP].dport 
+
         if pcap == 'rx':
-            if self.spkt[TCP].sport == args.clntport and self.spkt[IP].src == args.clntip:
+            if sport == args.clntport and self.spkt[IP].src == args.clntip:
                 self.flow = 'c2f'
-            elif self.spkt[TCP].dport == args.clntport_n and self.spkt[IP].dst == args.clntip_n:
+            elif dport == args.clntport_n and self.spkt[IP].dst == args.clntip_n:
                 self.flow = 's2f'
         else:
-            if self.spkt[TCP].sport == args.clntport_n and self.spkt[IP].src == args.clntip_n:
+            if sport == args.clntport_n and self.spkt[IP].src == args.clntip_n:
                 self.flow = 'f2s'
-            elif self.spkt[TCP].dport == args.clntport and self.spkt[IP].dst == args.clntip:
+            elif dport == args.clntport and self.spkt[IP].dst == args.clntip:
                 self.flow = 'f2c'
 
 
@@ -150,28 +177,44 @@ class MyPackt:
 
     @property
     def len(self):
-        return len(self.spkt[TCP].payload) if Raw in self.spkt else 0
+        if TCP in self.spkt:
+            return len(self.spkt[TCP].payload) if Raw in self.spkt else 0
+        else:
+            return len(self.spkt[UDP].payload) if Raw in self.spkt else 0
 
     def next(self):
-        if (self.spkt[TCP].flags.S or self.spkt[TCP].flags.F):
-            return 1 + self.spkt[TCP].seq 
+        if TCP in self.spkt:
+            if (self.spkt[TCP].flags.S or self.spkt[TCP].flags.F):
+                return 1 + self.spkt[TCP].seq 
+            else:
+                return self.len + self.spkt[TCP].seq 
         else:
-            return self.len + self.spkt[TCP].seq 
+            return 0
 
     @property
     def seq(self):
-        return self.spkt[TCP].seq
+        if TCP in self.spkt:
+            return self.spkt[TCP].seq
+        else:
+            return 0
 
     @property
     def ack(self):
-        return self.spkt[TCP].ack
+        if TCP in self.spkt:
+            return self.spkt[TCP].ack
+        else:
+            return 0
 
 
 
 class pcapsItr:
     def __init__(self, args):
-        rx = rdpcap(args.rx).filter(lambda p: rxfilter(args,p))
-        tx = rdpcap(args.tx).filter(lambda p: txfilter(args,p))
+        if args.proto == "udp":
+            rx = rdpcap(args.rx).filter(lambda p: rxfilter_udp(args,p))
+            tx = rdpcap(args.tx).filter(lambda p: txfilter_udp(args,p))
+        else:
+            rx = rdpcap(args.rx).filter(lambda p: rxfilter_tcp(args,p))
+            tx = rdpcap(args.tx).filter(lambda p: txfilter_tcp(args,p))
         self.rx        = iter(rx)
         self.tx        = iter(tx)
         self.p1        = None
@@ -243,7 +286,7 @@ def print_scenario(pcap, args):
         flow = p.flow
         plen  = p.len
         seq_s, nxt, ack = get_pkt_seqs(p, args)
-        flg   = pkt.sprintf("%TCP.flags%")
+        # flg   = pkt.sprintf("%TCP.flags%")
         seq_e = seq_s+plen-1 if plen > 0 else seq_s
 
         act = { 'flow': output_map[flow][0] }
@@ -253,30 +296,35 @@ def print_scenario(pcap, args):
             for r in (("\r","\\r"),("\n","\\n\n")):
                 payload = payload.replace(*r)
             act['data'] = payload
-        else:
-            act['flags'] = flg
+        elif TCP in pkt:
+            act['flags'] = pkt.sprintf("%TCP.flags%")
 
 
         output['scenario'].append( {output_map[flow][1] : act})
 
         if flow == 'c2f' and 'c2s' not in output['flows']:
             output['flows']['c2s'] = {}
-            if TCP in pkt:
-                output['flows']['c2s']['proto'] = 'tcp'
-            else:
-                output['flows']['c2s']['proto'] = 'udp'
             output['flows']['c2s']['src'] = pkt[IP].src
             output['flows']['c2s']['dst'] = pkt[IP].dst
-            output['flows']['c2s']['sport'] = pkt[TCP].sport
-            output['flows']['c2s']['dport'] = pkt[TCP].dport
+            if TCP in pkt:
+                output['flows']['c2s']['proto'] = 'tcp'
+                output['flows']['c2s']['sport'] = pkt[TCP].sport
+                output['flows']['c2s']['dport'] = pkt[TCP].dport
+            else:
+                output['flows']['c2s']['proto'] = 'udp'
+                output['flows']['c2s']['sport'] = pkt[UDP].sport
+                output['flows']['c2s']['dport'] = pkt[UDP].dport
+
         elif flow == 's2f' and 's2c' not in output['flows']:
             output['flows']['s2c'] = {}
             if TCP in pkt:
                 output['flows']['s2c']['proto'] = 'tcp'
+                output['flows']['s2c']['src'] = pkt[IP].src
+                output['flows']['s2c']['sport'] = pkt[TCP].sport
             else:
                 output['flows']['s2c']['proto'] = 'udp'
-            output['flows']['s2c']['src'] = pkt[IP].src
-            output['flows']['s2c']['sport'] = pkt[TCP].sport
+                output['flows']['s2c']['src'] = pkt[IP].src
+                output['flows']['s2c']['sport'] = pkt[UDP].sport
 
     yaml = YAML()
     yaml.representer.add_representer(str, repr_str)

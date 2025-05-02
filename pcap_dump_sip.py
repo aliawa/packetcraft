@@ -1,19 +1,10 @@
 #!/usr/bin/python
 
 import argparse
-#import time
-#import threading
-#import queue
-#import textwrap
-import logging
-#import ipaddress
-#import inspect
-
 from scapy.all import *
 from sip_parser.sip_message import SipMessage
 
 import pdb
-import argparse
 
 
 # --------------------------------------------------------------
@@ -60,8 +51,8 @@ def pcapfilter(args, p):
         key = ls[0].split('.')
         dkey="sip_msg.headers"
         for k in key:
-            dkey += ".get('" + k + "')"
-        if str(eval(dkey)).lower() != ls[1]:
+            dkey += ".get('" + k.lower() + "')"
+        if str(eval(dkey)) != ls[1]:
             return False
 
     return True;
