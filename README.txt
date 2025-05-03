@@ -92,6 +92,20 @@ flows:
      sport: 'random_num(6000, 8000)'
 
 
+mtu:
+if the flow has mtu defined then the packets will be framented so 
+that the IP payload does not exceed the MTU
+
+
+mss:
+if mss is defined it is put in TCP header but it is not used to actually
+change the size of tcp packets.
+
+
+tos:
+if tos is specified, it will be inserted into the IP header
+
+
 
 Receive Actions
 ----------------------------------------------------------------------
@@ -424,6 +438,10 @@ Logging
 ----------------------------------------------------------------------
 all sent a received packets are logged in packet.log whenb level DEBUG
 is set
+
+
+
+
 
 
 

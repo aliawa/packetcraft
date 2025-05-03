@@ -51,7 +51,7 @@ def is_valid_port(port):
 class Flow:
     def __init__(self, fl, arg_proto):
         self.proto   = fl['proto'] if 'proto' in fl else arg_proto
-        self.src     = flds_eval(fl['src'])
+        self.src     = fl['src']
         self.intf    = ip2dev(self.src)
         self.src_mac = ip2mac(self.src)
         self.ipid    = random.randint(1,100)
@@ -63,13 +63,15 @@ class Flow:
         self.sport   = flds_eval(fl['sport']) #evalport(fl,'sport')
 
         if 'dst' in fl:
-            self.dst = flds_eval(fl['dst'])
+            self.dst = fl['dst']
         if 'dport' in fl:
             self.dport = flds_eval(fl['dport'])
         if 'tos' in fl:
             self.tos = fl['tos']
         if 'mss' in fl:
             self.mss = fl['mss']
+        if 'mtu' in fl:
+            self.mtu = fl['mtu']
 
     def __repr__(self):
         d = {x:getattr(self,x) for x in dir(self) if not x.startswith('__')}
@@ -257,6 +259,7 @@ def flds_eval(exp):
     except Exception as e:
         genlog.debug(e)
         return exp
+
 
 
 def ip2dev(ip):
@@ -479,8 +482,14 @@ def do_send(act, c):
     elif UDP in pkt:
         genlog.debug("send to {}:{} intf {}".format(pkt[IP].dst, pkt[UDP].dport, intf))
 
-    sendp(pkt, iface=intf, verbose=False)
-    log_action("send", act['flow'], pkt)
+    if hasattr(fl, 'mtu') and len(pkt[IP].payload) > fl.mtu:
+        frags = fragment(pkt, fragsize=fl.mtu)
+        for frag in frags:
+            sendp(frag, iface=intf, verbose=False)
+            log_action("send", act['flow'], frag)
+    else:
+        sendp(pkt, iface=intf, verbose=False)
+        log_action("send", act['flow'], pkt)
 
     if 'save' in act:
         saved_pkts[act['save']] = pkt
