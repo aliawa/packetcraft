@@ -1,9 +1,11 @@
 from sys import argv
 from scapy.all import rdpcap, IP, Raw
+from os import path
 
 def help_text(sname):
+    dirname, fname = path.split(sname)
     print(f"Usage:")
-    print("    python {sname} <pcap-file>")
+    print(f"    python {fname} <pcap-file>")
     print () 
     print(" Dumps the payload of all packets that have payload" )
     print(" Replaces <NL> and <CR> in payload with \\r and \\n" )
@@ -19,7 +21,7 @@ def dump_payload(pcap):
             print("------------------")
 
 if __name__ == '__main__':
-    if len(argv) < 2:
+    if len(argv) < 2 or argv[1] == '-h':
         help_text(argv[0])
     else:
         dump_payload(argv[1])
