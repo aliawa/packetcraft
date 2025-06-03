@@ -63,7 +63,7 @@ class Flow:
         self.sport   = flds_eval(fl['sport']) #evalport(fl,'sport')
 
         if 'dst' in fl:
-            self.dst = fl['dst']
+            self.dst = flds_eval(fl['dst'])
         if 'dport' in fl:
             self.dport = flds_eval(fl['dport'])
         if 'tos' in fl:
@@ -677,18 +677,20 @@ def setup_logging(log_level):
 
     # packets log, all sniffed packets
     pktlog = logging.getLogger('replay_data_pkt') # Logger
-    loghdlr3 = logging.FileHandler("packet.log", mode='w')
-    pktlog.addHandler(loghdlr3)
     pktlog.setLevel(log_level)
+    if (log_level == logging.DEBUG):
+        loghdlr3 = logging.FileHandler("packet.log", mode='w')
+        pktlog.addHandler(loghdlr3)
+
 
 def init(logl):
     setup_logging(logl)
 
-def setup(scenario_f, routes_f, route_type, params_f, pcap_f, proto):
+
+def setup(flows_dict, routes_f, route_type, params_f, pcap_f, proto):
     # global dicts
     global routing
     global routing_type
-    global scenario
     global saved_pkts
     global fname
     global sniffer
@@ -697,8 +699,6 @@ def setup(scenario_f, routes_f, route_type, params_f, pcap_f, proto):
     global ip2dev_tbl
     global flows
 
-    with open(scenario_f, 'r') as f:
-        scen_dict = yaml.full_load(f)
 
     # routing
     routing_type = route_type
@@ -721,7 +721,7 @@ def setup(scenario_f, routes_f, route_type, params_f, pcap_f, proto):
     intfs = set()
     hosts = set()
     flows = {}
-    for name, fl in scen_dict['flows'].items():
+    for name, fl in flows_dict.items():
         flobj = Flow(fl, proto)
         globals()[name]= flobj
         flows[name]= flobj
@@ -732,7 +732,6 @@ def setup(scenario_f, routes_f, route_type, params_f, pcap_f, proto):
     fltr=' or '.join(map(lambda x: "host "+x, list(hosts)))
     sniffer = AsyncSniffer(prn=pkt_cb, filter=fltr, iface=list(intfs), store=(fname != None))
     sniffer.start()
-    return scen_dict['scenario']
    
 
 def stop():
@@ -743,6 +742,8 @@ def stop():
             wrpcap(fname, pktlst)
 
 
+def set_flow(flow_name, attr, val):
+    setattr(flows[flow_name], attr, val)
 
 
 # ---------------------------------------------------------------
@@ -776,19 +777,23 @@ if __name__ == '__main__':
     else:
         fname = None
 
+    with open(args.testfile, 'r') as f:
+        scen_dict = yaml.full_load(f)
+
     try:
         if args.src_routes:
-            scenario = setup(args.testfile, args.src_routes, Routing.source, args.params, fname, args.proto)
+            setup(scen_dict['flows'], args.src_routes, Routing.source, args.params, fname, args.proto)
         else:
-            scenario = setup(args.testfile, args.dst_routes, Routing.dest, args.params, fname, args.proto)
-        
+            setup(scen_dict['flows'], args.dst_routes, Routing.dest, args.params, fname, args.proto)
+       
+
     except KeyError as inst:
         genlog.critical ("KeyError: {}".format(inst))
         exit()
        
     try:
         time.sleep(3)
-        run_scenario(scenario)
+        run_scenario(scen_dict['scenario'])
     except KeyError as inst:
         genlog.critical ("KeyError: {}".format(inst))
     except Error as err:

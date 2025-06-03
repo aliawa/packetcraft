@@ -3,7 +3,7 @@ flows:
   'c2s':
      proto: 'tcp'
      src: '192.168.1.1'
-     sport: 'random'
+     sport: 'random_num(20000,30000)'
      dst: '10.1.1.1'
      dport: '554'
 
@@ -15,12 +15,12 @@ flows:
   's2c_rtp':
      proto: 'udp'
      src: '10.1.1.1'
-     sport: 'random'
+     sport: 'random_num(20000,30000)'
 
   'c2s_rtp':
      proto: 'udp'
      src: '192.168.1.1'
-     sport: 'random'
+     sport: 'random_num(20000,30000)'
 
   's2c_rtcp':
      proto: 'udp'
@@ -42,8 +42,8 @@ scenario:
     flow: 's2c'
     flags: S
     exec:
-       - 's2c.dst=pkt.src'
-       - 's2c.dport=pkt.sport'
+       - 's2c.dst=pkt[IP].src'
+       - 's2c.dport=pkt[TCP].sport'
 
 - send:
     flow: 's2c'
@@ -67,10 +67,10 @@ scenario:
    search: 
     - 'Transport:.*client_port=(?P<client_rtp>\d+)(?:-(?P<client_rtcp>\d+))?'
    exec: 
-    - 's2c_rtp.dport=client_rtp'
-    - 's2c_rtp.dst=pkt.src'
-    - 's2c_rtcp.dport=client_rtcp'
-    - 's2c_rtcp.dst=pkt.src'
+    - 's2c_rtp.dport=recv["client_rtp"]'
+    - 's2c_rtp.dst=pkt[IP].src'
+    - 's2c_rtcp.dport=recv["client_rtcp"]'
+    - 's2c_rtcp.dst=pkt[IP].src'
 
 - send:
    flow: 's2c'
@@ -78,7 +78,7 @@ scenario:
      RTSP/1.0 200 OK\r\n
      CSeq: 1\r\n
      Session: 12345678\r\n
-     Transport: RTP/AVP/UDP;unicast;client_port={client_rtp}-{client_rtcp};server_port={s2c_rtp.sport}-{s2c_rtcp.sport}\r\n
+     Transport: RTP/AVP/UDP;unicast;client_port={recv['client_rtp']}-{recv['client_rtcp']};server_port={s2c_rtp.sport}-{s2c_rtcp.sport}\r\n
      \r\n
     
 - recv:
@@ -86,10 +86,10 @@ scenario:
    search: 
     - 'Transport:.*server_port=(?P<server_rtp>\d+)(?:-(?P<server_rtcp>\d+))?'
    exec: 
-    - 'c2s_rtp.dport=server_rtp'
-    - 'c2s_rtp.dst=pkt.src'
-    - 'c2s_rtcp.dport=server_rtcp'
-    - 'c2s_rtcp.dst=pkt.src'
+    - 'c2s_rtp.dport=recv["server_rtp"]'
+    - 'c2s_rtp.dst=pkt[IP].src'
+    - 'c2s_rtcp.dport=recv["server_rtcp"]'
+    - 'c2s_rtcp.dst=pkt[IP].src'
  
 - send:
    flow: 's2c_rtp'
