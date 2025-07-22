@@ -3,6 +3,8 @@
 |                           replay_data.py                           |
 |                                                                    |
 *--------------------------------------------------------------------*
+replay data tool can be used to replay a scenario described in a yaml file.
+    replay_data.py -t test.yaml -r routing_conf.yaml -l INFO
 
 
 Required Modules
@@ -355,10 +357,6 @@ Debugging
 When -l DEBUG is specified all sent and received packets are dumped into
 packet.log file
 
-REPLAY-DATA
-replay data tool can be used to replay a scenario described in a yaml file.
-
-replay_data.py -t test.yaml -r routing_conf.yaml -l INFO
 
 
 
@@ -439,12 +437,6 @@ Options
 -pr 
     Specify transport protocol. It can be specified as 'udp' or 'tcp'
 
-
-
-Logging
-----------------------------------------------------------------------
-all sent a received packets are logged in packet.log whenb level DEBUG
-is set
 
 
 
