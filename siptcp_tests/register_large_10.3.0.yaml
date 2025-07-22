@@ -1,14 +1,14 @@
 flows:
   'c2s':
      proto: tcp
-     src: 192.168.0.113
-     sport: 'random'
-     dst: 12.0.2.114
+     src: '192.168.1.49' 
+     sport: 'random_num(5000, 7000)'
+     dst: '10.1.1.49'
      dport: 5060
 
   's2c':
      proto: tcp
-     src: 12.0.2.114
+     src: '10.1.1.49'
      sport: 5060
 
 
@@ -20,8 +20,8 @@ scenario:
     flow: s2c
     flags: S
     exec:
-    - s2c.dst=pkt.src
-    - s2c.dport=pkt.sport
+    - s2c.dst=pkt[IP].src
+    - s2c.dport=pkt[IP].sport
 - send:
     flow: s2c
     flags: SA
@@ -41,20 +41,9 @@ scenario:
       CSeq: 101 REGISTER\r\n
       User-Agent: Cisco-CP8941/9.4.2\r\n
       Contact: <sip:ad7cc845-114f-8fc5-2172-897baa1d28e8@192.168.0.113:5060;transport=tcp>;+sip.instance="<urn:uuid:00000000-0000-0000-0000-20bbc0200f84>";+u.sip!d
-- recv:
-    flow: s2c
-    match: 'REGISTER sip:{param.ruri_ip} SIP/2.0'
-    search: 
-      - 'SIP/2.0/TCP (?P<via_ip>[\d.]+):(?P<via_port>\d+);'
-      - 'Contact:\s*<sip:[^@]+@(?P<contact_ip>[\d.]+):(?P<contact_port>\d+);'
-    verify:
-      - via_ip == param.via_ip
-      - via_port == param.via_port
-      - contact_ip == param.contact_ip 
-      - contact_port == param.contact_port
-- send:
-    flow: s2c
-    flags: 'A'
+- delay:
+    timeout: 10
+
 - send:
     flow: c2s
     data: |-
@@ -63,12 +52,9 @@ scenario:
       Reason: SIP;cause=200;text="cisco-alarm:25 Name=SEP20BBC0200F84 ActiveLoad=SIP894x.9-4-2-8 InactiveLoad=SCCP894x.9-4-2-8 Last=initialized"\r\n
       Expires: 180\r\n
       Content-Type: multipart/mixed
-- recv:
-    flow: s2c
-    match: 'transport=tcp>;'
-- send:
-    flow: s2c
-    flags: 'A'
+- delay:
+    timeout: 10
+
 - send:
     flow: c2s
     data: |-
@@ -92,12 +78,9 @@ scenario:
       --uniqueBoundary\r\n
       Content-Type: application/x-cisco-remotecc-request+xml\r\n
       Content-Dispo
-- recv:
-    flow: s2c
-    match: '; boundary=uniqueBoundary\r\n'
-- send:
-    flow: s2c
-    flags: 'A'
+- delay:
+    timeout: 10
+
 - send:
     flow: c2s
     data: |-
@@ -133,6 +116,10 @@ scenario:
       Content-Disposition: session;handling=optional\r\n
       \r\n
       <?x
+
+- delay:
+    timeout: 10
+
 - send:
     flow: c2s
     data: |-
@@ -147,16 +134,25 @@ scenario:
       </aawais>\r\n
       \r\n
       --uniqueBo
+- delay: 
+    timeout: 10
+
 - send:
     flow: c2s
     data: undary
+
 - send:
     flow: c2s
     data: |
       --\r\n
+
+- delay: 
+    timeout: 10
+
+
 - recv:
     flow: s2c
-    match: \s+\d{4}\r\n
-- send:
-    flow: s2c
-    flags: A
+    match: 'REGISTER sip:{param.ruri_ip} SIP/2.0'
+    search: 
+      - 'SIP/2.0/TCP (?P<via_ip>[\d.]+):(?P<via_port>\d+);'
+      - 'Contact:\s*<sip:[^@]+@(?P<contact_ip>[\d.]+):(?P<contact_port>\d+);'

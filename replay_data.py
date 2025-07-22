@@ -51,7 +51,7 @@ def is_valid_port(port):
 class Flow:
     def __init__(self, fl, arg_proto):
         self.proto   = fl['proto'] if 'proto' in fl else arg_proto
-        self.src     = fl['src']
+        self.src     = flds_eval(fl['src'])
         self.intf    = ip2dev(self.src)
         self.src_mac = ip2mac(self.src)
         self.ipid    = random.randint(1,100)
@@ -251,11 +251,20 @@ def l7_match(pkt, fl, act):
 
     return True
 
+def is_ip(s):
+    try:
+        ipaddress.ip_address(s)
+        return True
+    except ValueError:
+        return False
 
 
 def flds_eval(exp):
     try:
-        return eval(exp)
+        if is_ip(exp):
+            return exp
+        else:
+            return eval(exp)
     except Exception as e:
         genlog.debug(e)
         return exp
