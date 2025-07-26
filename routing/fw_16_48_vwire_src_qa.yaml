@@ -1,0 +1,17 @@
+# Firewall: pa-16-48-aa
+# VM: Ubuntu-16-50-aa
+# next-hop and egress interface for each source ip
+'routing':
+  '192.168.20.0/24':
+      next-hop: 00:50:56:83:89:71 
+      dev: ens192
+  '192.168.40.135':
+      next-hop: 00:50:56:83:04:e3
+      dev: ens224
+
+
+# Local interfaces and their assigned ip addresses
+'interfaces':
+   'ens192': ['192.168.20.140']
+   'ens224': ['192.168.40.135']
+    
