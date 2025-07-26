@@ -1,0 +1,135 @@
+# 2,3,4,1,5
+
+flows:
+  c2s:
+    src: 192.168.20.140
+    dst: 192.168.40.135
+    proto: tcp
+    sport: 32868
+    dport: 5060
+  s2c:
+    proto: tcp
+    src: 192.168.40.135
+    sport: 5060
+
+scenario:
+
+- connect:
+    flow: c2s
+    peer_flow: s2c
+
+- create:
+    flow: c2s
+    name: 'seg1'
+    data: |-
+      INVITE sip:1@192.168.40.135;user=phone SIP/2.0\r\n
+      Via: SIP/2.0/TCP 192.168.20.140:32868;branch=z9hG4bK00e674f6\r\n
+      From: "1024" <sip:1024@192.168.40.135>;tag=e8edf3a83d2a80c314ead829-0021e9c2\r\n
+      To: <sip:1@192.168.40.135>\r\n
+      Call-ID: e8edf3a8-3d2a0069-6ba8e9b9-06666366@192.168.20.140\r\n
+      Max-Forwards: 70\r\n
+      Date: Wed, 23 Jul 2025 01:53:46 GMT\r\n
+      CSeq: 101 INVITE\r\n
+      User-Agent: Cisco-CP8941/9.4.2\r\n
+      Contact: <sip:c68218a7-f142-c3cf-9f6e-5b1534a7d460@192.168.20.140:32868;transport=tcp>;video\r\n
+      Expires: 180\r\n
+      Accept: application/sd
+
+- create:
+    flow: c2s
+    name: 'seg2'
+    data: |-
+      p\r\n
+      Allow: ACK,BYE,CANCEL,INVITE,NOTIFY,OPTIONS,REFER,REGISTER,UPDATE,SUBSCRIBE,INFO\r\n
+      Remote-Party-ID: "1024" <sip:1024@192.168.40.135>;party=calling;id-type=subscriber;privacy=off;screen=yes\r\n
+      Require: sdp-anat\r\n
+      Supported: replaces,join,sdp-anat,norefersub,resource-priority,extended-refer,X-cisco-callinfo,X-cisco-serviceuri,X-cisco-escapecodes,X-cisco-service-control,X-cisco-srtp-fallback,X-cisco-monrec,X-cisco-config,X-cisco-sis-7.0.0,X-cisco-xsi-8.5.1\r\n
+      Allow-Events: kpml,dialog\r\n
+      Recv-Info: conference\r\n
+      Recv
+
+
+- create:
+    flow: c2s
+    name: 'seg3'
+    data: |-
+      -Info: x-cisco-conference\r\n
+      Content-Length: 975\r\n
+      Content-Type: application/sdp\r\n
+      Content-Disposition: session;handling=optional\r\n
+      \r\n
+      v=0\r\n
+      o=Cisco-SIPUA 17542 0 IN IP4 192.168.20.140\r\n
+      s=SIP Call\r\n
+      t=0 0\r\n
+      m=audio 16616 RTP/AVP 0 8 18 102 9 116 101\r\n
+      c=IN IP4 192.168.20.140\r\n
+      a=trafficclass:conversational.audio.avconf.aq:admitted\r\n
+      a=rtpmap:0 PCMU/8000\r\n
+      a=rtpmap:8 PCMA/8000\r\n
+      a=rtpmap:18 G729/8000\r\n
+      a=fmtp:18 annexb=no\r\n
+      a=rtpmap:102 L16/16000\r\n
+      a=rtpmap:9 G722/8000\r\n
+      a=rtpmap:116 iLBC/8000\r\n
+      a=fmtp:116 mode=20\r\n
+      a=rtpmap:10
+
+- create:
+    flow: c2s
+    name: 'seg4'
+    data: |-
+      1 telephone-event/8000\r\n
+      a=fmtp:101 0-15\r\n
+      a=sendrecv\r\n
+      m=video 16618 RTP/AVP 126 97\r\n
+      c=IN IP4 192.168.20.140\r\n
+      b=TIAS:2000000\r\n
+      a=trafficclass:conversational.video.avconf.aq:admitted\r\n
+      a=rtpmap:126 H264/90000\r\n
+      a=fmtp:126 profile-level-id=428014;packetization-mode=1;level-asymmetry-allowed=1;max-mbps=36000;max-fs=1200;max-rcmd-nalu-size=1300\r\n
+      a=imageattr:126 send * recv [x=640,y=480]\r\n
+      a=rtpmap:97 H264/90000\r\n
+      a=fmtp:97 profile-level-id=428014;packetization-mode=0;level-asymmetry-allowed=1;max-mbps=36000;max-fs=120
+
+- create:
+    flow: c2s
+    name: 'seg5'
+    data: |
+      0\r\n
+      a=imageattr:97 send * recv [x=640,y=480]\r\n
+      a=rtcp-fb:* ccm tmmbr\r\n
+      a=sendrecv\r\n
+
+- send:
+    flow: c2s
+    name: 'seg2'
+- delay:
+    timeout: 5
+- send:
+    flow: c2s
+    name: 'seg3'
+- delay:
+    timeout: 5
+- send:
+    flow: c2s
+    name: 'seg1'
+- delay:
+    timeout: 5
+- send:
+    flow: c2s
+    name: 'seg4'
+- delay:
+    timeout: 5
+- send:
+    flow: c2s
+    name: 'seg5'
+
+
+- recv:
+    flow: s2c
+    match: INVITE sip:1@192.168.40.135;user=phone SIP/2.0\r\n
+
+- recv:
+    flow: s2c
+
