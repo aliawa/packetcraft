@@ -5,7 +5,7 @@ flows:
     src: 192.168.20.140
     dst: 192.168.40.135
     proto: tcp
-    sport: 32868
+    sport: 'random_num(6000,10000)' 
     dport: 5060
   s2c:
     proto: tcp
@@ -23,7 +23,7 @@ scenario:
     name: 'seg1'
     data: |-
       INVITE sip:1@192.168.40.135;user=phone SIP/2.0\r\n
-      Via: SIP/2.0/TCP 192.168.20.140:32868;branch=z9hG4bK00e674f6\r\n
+      Via: SIP/2.0/TCP 192.168.20.140:{c2s.sport};branch=z9hG4bK00e674f6\r\n
       From: "1024" <sip:1024@192.168.40.135>;tag=e8edf3a83d2a80c314ead829-0021e9c2\r\n
       To: <sip:1@192.168.40.135>\r\n
       Call-ID: e8edf3a8-3d2a0069-6ba8e9b9-06666366@192.168.20.140\r\n
@@ -31,7 +31,7 @@ scenario:
       Date: Wed, 23 Jul 2025 01:53:46 GMT\r\n
       CSeq: 101 INVITE\r\n
       User-Agent: Cisco-CP8941/9.4.2\r\n
-      Contact: <sip:c68218a7-f142-c3cf-9f6e-5b1534a7d460@192.168.20.140:32868;transport=tcp>;video\r\n
+      Contact: <sip:c68218a7-f142-c3cf-9f6e-5b1534a7d460@192.168.20.140:{c2s.sport};transport=tcp>;video\r\n
       Expires: 180\r\n
       Accept: application/sd
 
@@ -103,12 +103,12 @@ scenario:
 
 - send:
     flow: c2s
-    name: 'seg2'
+    name: 'seg3'
 - delay:
     timeout: 5
 - send:
     flow: c2s
-    name: 'seg3'
+    name: 'seg2'
 - delay:
     timeout: 5
 - send:
@@ -129,7 +129,17 @@ scenario:
 - recv:
     flow: s2c
     match: INVITE sip:1@192.168.40.135;user=phone SIP/2.0\r\n
+- send:
+    flow: s2c
+    flags: 'A'
 
 - recv:
     flow: s2c
-
+- send:
+    flow: s2c
+    flags: 'A'
+- recv:
+    flow: s2c
+- send:
+    flow: s2c
+    flags: 'A'

@@ -228,7 +228,9 @@ def update_l3_l4(fl, pkt):
                 elif fl.ack > i:
                     genlog.debug(f"remove illegal seq nr. {i} from ooq")
                     del fl.ooq[i]
-
+        elif fl.ack == 0:
+            genlog.debug(f"Set initial ack to {sseq}")
+            fl.ack = sseq+1
         else:
             fl.ooq[sseq]=endseq 
             genlog.debug(f"out of order packet with seq nr {sseq}")

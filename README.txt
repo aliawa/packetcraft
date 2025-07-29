@@ -7,10 +7,17 @@
 
 Required Modules
 ----------------------------------------------------------------------
-pip		    apt install python3-pip
-scapy	    apt install python3-scapy
-pyyaml
-textwrap3	python3 -m pip install textwrap3
+ubuntu
+    pip		    apt install python3-pip
+    scapy	    apt install python3-scapy
+    pyyaml
+    textwrap3	python3 -m pip install textwrap3
+
+macos:
+    python3 -m venv pyvenv
+    source pyvenv/bin/activate
+    python -m pip install scapy
+    python -m pip install ruamel.yaml                # needed for pcap_dump_flow.py
 
 
 Need for a protocol traffic generator
