@@ -457,7 +457,7 @@ ruamel                          apt install python3-ruamel.yaml
 
 
 
-python3 tcp_list_dataflow.py -pc 3286 -ipc 192.168.1.49 -o flow_c2s -r rx tx
+python3 pcap_dump_flow.py -pc 3286 -ipc 192.168.1.49 -o flow_c2s -r rx tx
 
 The script filters out the stream to plot based on client ip and port. 
 If there is NAT then -pcn and -ipcn must be provided to find the f2s 
