@@ -4,22 +4,9 @@
 |                                                                    |
 *--------------------------------------------------------------------*
 replay data tool can be used to replay a scenario described in a yaml file.
-    replay_data.py -t test.yaml -r routing_conf.yaml -l INFO
 
-
-Required Modules
-----------------------------------------------------------------------
-ubuntu
-    pip		    apt install python3-pip
-    scapy	    apt install python3-scapy
-    pyyaml
-    textwrap3	python3 -m pip install textwrap3
-
-macos:
-    python3 -m venv pyvenv
-    source pyvenv/bin/activate
-    python -m pip install scapy
-    python -m pip install ruamel.yaml                # needed for pcap_dump_flow.py
+Usage:
+replay_data.py -t test.yaml -r routing_conf.yaml -l INFO
 
 
 Need for a protocol traffic generator
@@ -206,7 +193,7 @@ Commands
 
 - search: (list)
     all found fields are stored in fields dictionary
-    if search fails no error reported, and we don't ignore the packet
+    if search fails no error reported, and we do not ignore the packet
 
 
 - exec: (list)
@@ -439,145 +426,17 @@ Options
 
 
 
-
-
-
-
-
-
-#--------------------------------------------------------------------#
-|                                                                    |
-|                       pcap_dump_flow.py                            |
-|                                                                    |
-#--------------------------------------------------------------------#
-
-Required Modules
+Special Cases
 ----------------------------------------------------------------------
-ruamel                          apt install python3-ruamel.yaml
+Setup a send only replay through cleartext proxy.
+if we want to add variation in processing packets, for example some 
+packets maybe dropped, we cannot create a deterministic receive scenario
 
-
-
-python3 pcap_dump_flow.py -pc 3286 -ipc 192.168.1.49 -o flow_c2s -r rx tx
-
-The script filters out the stream to plot based on client ip and port. 
-If there is NAT then -pcn and -ipcn must be provided to find the f2s 
-(firewall-to-server) and s2f (server-to-firewall) flows
-
-*   wrong sequence number or wrong ack number
-+   retransmitted packet.
-
-Output with sip_call using proxy. -flow_c2s
-
-     id        seq   len       next              id        seq   len       next
-    ----       ----  ----       ----            ----       ----  ----       ----
-     42          0      0          1  -->|                                              SYN from client to fw
-                                         |-->     42          0      0          1       SYN from fw to server
-                                         |<--     17                            1       SYN/ACK from server to fw
-     17                            1  <--|                                              SYN/ACK from fw to client
-     43          1    617        618  -->|                                              INVITE from client, tcp payload len is 617, client is expection tcp-ack = 618
-                                         |-->  24066          1    617        618       INVITE from proxy to server, note the ip.id changed becaue proxy created a new packet
-                                         |<--     18                          618       INVITE acked by server
-  59580                          618  <--|                                              INVITE tcp-ack from proxy to client
-                                         |-->  47758        618      0        618       Proxy sending tcp-ack on its own to 200 OK received from server
-     44        618      0        618  -->|                                              client sends tcp-ack to 200 OK
+client:
+  replay_data.sh -sr routing/vm16_49_vwire_src_qa.yaml -t tcp_segmentation/invite_segs_oo_sendonly.yaml -l INFO
+server:
+  socat - TCP-LISTEN:5060,fork,reuseaddr
 
 
 
 
-
-
-#--------------------------------------------------------------------#
-|                                                                    |
-|                          pcap_dump_sip.py                          |
-|                                                                    |
-#--------------------------------------------------------------------#
-
-dependency:
-    sip-parser      alxgb/sip-parser
-    pip install sip-parser/src/sip_parser
-
-Usage:
-    pcap_dump_sip.py rx.pcap --sip "Call-ID=0022905c-59680003-b6a0cb24-b0fc6828@192.168.30.151"
-
-Other fields that can be searched. See the message below and there parsed version 
-    REFER sip:192.168.40.135 SIP/2.0^M
-    Via: SIP/2.0/UDP 192.168.30.151:5060;branch=z9hG4bK4eb7d4e8^M
-    From: <sip:0022905c5968@192.168.30.151>;tag=0022905c596800046fa3b5e4-7985c768^M
-    To: <sip:192.168.40.135>^M
-    Call-ID: 0022905c-59680003-b6a0cb24-b0fc6828@192.168.30.151^M
-    Date: Wed, 30 Apr 2025 19:13:48 GMT^M
-    CSeq: 1000 REFER^M
-    User-Agent: Cisco-CP7962G/9.4.2^M
-    Expires: 10^M
-    Max-Forwards: 70^M
-    Contact: <sip:0022905c5968@192.168.30.151:5060>^M
-    Require: norefersub^M
-    Referred-By: <sip:0022905c5968@192.168.30.151>^M
-    Refer-To: cid:5610f564@192.168.30.151^M
-    Content-Id: <5610f564@192.168.30.151>^M
-    Allow: ACK,BYE,CANCEL,INVITE,NOTIFY,OPTIONS,REFER,REGISTER,UPDATE,SUBSCRIBE^M
-    Content-Length: 1313^M
-    Content-Type: application/x-cisco-alarm+xml^M
-    Content-Disposition: session;handling=required^M
-
-
-    {
-        'via': [{'version': '2.0', 'protocol': 'UDP', 'host': '192.168.30.151', 'port': 5060, 'params': {'branch': 'z9hG4bK4eb7d4e8'}}], 
-        'from': {'name': None, 'uri': 'sip:0022905c5968@192.168.30.151', 'params': {'tag': '0022905c596800046fa3b5e4-7985c768'}}, 
-        'to': {'name': None, 'uri': 'sip:192.168.40.135', 'params': {}}, 
-        'call-id': '0022905c-59680003-b6a0cb24-b0fc6828@192.168.30.151', 
-        'date': 'Wed, 30 Apr 2025 19:13:48 GMT', 
-        'cseq': {'seq': 1000, 'method': 'REFER'}, 
-        'user-agent': 'Cisco-CP7962G/9.4.2', 
-        'expires': '10', 
-        'max-forwards': 70, 
-        'contact': [{'name': None, 'uri': 'sip:0022905c5968@192.168.30.151:5060', 'params': {}}], 
-        'require': 'norefersub', 
-        'referred-by': '<sip:0022905c5968@192.168.30.151>', 
-        'refer-to': {'name': None, 'uri': 'cid:5610f564@192.168.30.151', 'params': {}}, 
-        'content-id': '<5610f564@192.168.30.151>', 
-        'allow': 'ACK,BYE,CANCEL,INVITE,NOTIFY,OPTIONS,REFER,REGISTER,UPDATE,SUBSCRIBE', 
-        'content-length': 1313, 
-        'content-type': 'application/x-cisco-alarm+xml', 
-        'content-disposition': 'session;handling=required'
-    }
-
-
-
-    SIP/2.0 202 Accepted^M
-    Via: SIP/2.0/UDP 192.168.40.151:27859;branch=z9hG4bK4eb7d4e8^M
-    From: <sip:0022905c5968@192.168.40.151:27859>;tag=0022905c596800046fa3b5e4-7985c768^M
-    To: <sip:192.168.40.135>;tag=1198734326^M
-    Date: Wed, 30 Apr 2025 19:13:48 GMT^M
-    Call-ID: 0022905c-59680003-b6a0cb24-b0fc6828@192.168.30.151^M
-    CSeq: 1000 REFER^M
-    Contact: <sip:192.168.40.135:5060>^M
-    Content-Length: 0^M
-    ^M
-
-    {
-        'via'            : [{'version': '2.0', 'protocol': 'UDP', 'host': '192.168.40.151', 'port': 27859, 'params': {'branch': 'z9hG4bK4eb7d4e8'}}],
-        'from'           : {'name': None, 'uri': 'sip:0022905c5968@192.168.40.151:27859', 'params': {'tag': '0022905c596800046fa3b5e4-7985c768'}}, 
-        'to'             : {'name': None, 'uri': 'sip:192.168.40.135', 'params': {'tag': '1198734326'}}, 
-        'date'           : 'Wed, 30 Apr 2025 19:13:48 GMT', 
-        'call-id'        : '0022905c-59680003-b6a0cb24-b0fc6828@192.168.30.151', 
-        'cseq'           : {'seq': 1000, 'method': 'REFER'}, 
-        'contact'        : [{'name': None, 'uri': 'sip:192.168.40.135:5060', 'params': {}}], 
-        'content-length' : 0
-    }
-
-
-
-
-#--------------------------------------------------------------------#
-|                                                                    |
-|                          pcap_dump_payload.py                      |
-|                                                                    |
-#--------------------------------------------------------------------#
-
-Usage:
-    pcap_dump_payload.py <pcap-file>
-
-Dumps the payload of all packets that have payload
-Replaces <NL> and <CR> in payload with \r and \n
-     

@@ -1,0 +1,81 @@
+#--------------------------------------------------------------------#
+|                                                                    |
+|                          pcap_sip.py                          |
+|                                                                    |
+#--------------------------------------------------------------------#
+
+dependency:
+    sip-parser      alxgb/sip-parser
+    pip install sip-parser/src/sip_parser
+
+Usage:
+    pcap_sip.py rx.pcap --sip "Call-ID=0022905c-59680003-b6a0cb24-b0fc6828@192.168.30.151"
+
+Other fields that can be searched. See the message below and there parsed version 
+    REFER sip:192.168.40.135 SIP/2.0^M
+    Via: SIP/2.0/UDP 192.168.30.151:5060;branch=z9hG4bK4eb7d4e8^M
+    From: <sip:0022905c5968@192.168.30.151>;tag=0022905c596800046fa3b5e4-7985c768^M
+    To: <sip:192.168.40.135>^M
+    Call-ID: 0022905c-59680003-b6a0cb24-b0fc6828@192.168.30.151^M
+    Date: Wed, 30 Apr 2025 19:13:48 GMT^M
+    CSeq: 1000 REFER^M
+    User-Agent: Cisco-CP7962G/9.4.2^M
+    Expires: 10^M
+    Max-Forwards: 70^M
+    Contact: <sip:0022905c5968@192.168.30.151:5060>^M
+    Require: norefersub^M
+    Referred-By: <sip:0022905c5968@192.168.30.151>^M
+    Refer-To: cid:5610f564@192.168.30.151^M
+    Content-Id: <5610f564@192.168.30.151>^M
+    Allow: ACK,BYE,CANCEL,INVITE,NOTIFY,OPTIONS,REFER,REGISTER,UPDATE,SUBSCRIBE^M
+    Content-Length: 1313^M
+    Content-Type: application/x-cisco-alarm+xml^M
+    Content-Disposition: session;handling=required^M
+
+
+    {
+        'via': [{'version': '2.0', 'protocol': 'UDP', 'host': '192.168.30.151', 'port': 5060, 'params': {'branch': 'z9hG4bK4eb7d4e8'}}], 
+        'from': {'name': None, 'uri': 'sip:0022905c5968@192.168.30.151', 'params': {'tag': '0022905c596800046fa3b5e4-7985c768'}}, 
+        'to': {'name': None, 'uri': 'sip:192.168.40.135', 'params': {}}, 
+        'call-id': '0022905c-59680003-b6a0cb24-b0fc6828@192.168.30.151', 
+        'date': 'Wed, 30 Apr 2025 19:13:48 GMT', 
+        'cseq': {'seq': 1000, 'method': 'REFER'}, 
+        'user-agent': 'Cisco-CP7962G/9.4.2', 
+        'expires': '10', 
+        'max-forwards': 70, 
+        'contact': [{'name': None, 'uri': 'sip:0022905c5968@192.168.30.151:5060', 'params': {}}], 
+        'require': 'norefersub', 
+        'referred-by': '<sip:0022905c5968@192.168.30.151>', 
+        'refer-to': {'name': None, 'uri': 'cid:5610f564@192.168.30.151', 'params': {}}, 
+        'content-id': '<5610f564@192.168.30.151>', 
+        'allow': 'ACK,BYE,CANCEL,INVITE,NOTIFY,OPTIONS,REFER,REGISTER,UPDATE,SUBSCRIBE', 
+        'content-length': 1313, 
+        'content-type': 'application/x-cisco-alarm+xml', 
+        'content-disposition': 'session;handling=required'
+    }
+
+
+
+    SIP/2.0 202 Accepted^M
+    Via: SIP/2.0/UDP 192.168.40.151:27859;branch=z9hG4bK4eb7d4e8^M
+    From: <sip:0022905c5968@192.168.40.151:27859>;tag=0022905c596800046fa3b5e4-7985c768^M
+    To: <sip:192.168.40.135>;tag=1198734326^M
+    Date: Wed, 30 Apr 2025 19:13:48 GMT^M
+    Call-ID: 0022905c-59680003-b6a0cb24-b0fc6828@192.168.30.151^M
+    CSeq: 1000 REFER^M
+    Contact: <sip:192.168.40.135:5060>^M
+    Content-Length: 0^M
+    ^M
+
+    {
+        'via'            : [{'version': '2.0', 'protocol': 'UDP', 'host': '192.168.40.151', 'port': 27859, 'params': {'branch': 'z9hG4bK4eb7d4e8'}}],
+        'from'           : {'name': None, 'uri': 'sip:0022905c5968@192.168.40.151:27859', 'params': {'tag': '0022905c596800046fa3b5e4-7985c768'}}, 
+        'to'             : {'name': None, 'uri': 'sip:192.168.40.135', 'params': {'tag': '1198734326'}}, 
+        'date'           : 'Wed, 30 Apr 2025 19:13:48 GMT', 
+        'call-id'        : '0022905c-59680003-b6a0cb24-b0fc6828@192.168.30.151', 
+        'cseq'           : {'seq': 1000, 'method': 'REFER'}, 
+        'contact'        : [{'name': None, 'uri': 'sip:192.168.40.135:5060', 'params': {}}], 
+        'content-length' : 0
+    }
+
+

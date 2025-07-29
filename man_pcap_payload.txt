@@ -1,0 +1,12 @@
+#--------------------------------------------------------------------#
+|                                                                    |
+|                          pcap_payload.py                      |
+|                                                                    |
+#--------------------------------------------------------------------#
+
+Usage:
+    pcap_payload.py <pcap-file>
+
+Dumps the payload of all packets that have payload
+Replaces <NL> and <CR> in payload with \r and \n
+     
