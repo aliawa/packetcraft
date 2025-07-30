@@ -10,8 +10,8 @@ import time
 def init_test():
     replay_data.setup_logging(logging.WARN)
 
-root_dir = "/home/aawais/workspace/packetcraft"
-routes   = 'fw_16_48_vwire_src_qa.yaml'
+root_dir = "/home/aawais/packetcraft"
+routes   = 'vm16_49_vwire_src_qa.yaml'
 test_dir = "tcp_segmentation"
 rout_dir = "routing"
 scnfile  = "invite_segs_oo.yaml"
