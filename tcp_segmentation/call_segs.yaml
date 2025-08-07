@@ -122,8 +122,6 @@ scenario:
     flow: c2s
     flags: A
 
-
-
 - send:
     flow: s2c
     data: |
@@ -342,7 +340,4 @@ scenario:
     flow: c2s
     flags: A
 
-- recv:
-    flow: s2c
-    flags: A
 
