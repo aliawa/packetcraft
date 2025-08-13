@@ -47,7 +47,7 @@ scenario:
       RTSP/1.0 200 OK\r\n
       CSeq: 1\r\n
       Session: 12345678\r\n
-      Transport: RTP/AVP/UDP;unicast;client_port={client_rtp}-{client_rtcp};server_port=5000-5001\r\n
+      Transport: RTP/AVP/UDP;unicast;client_port={recv['client_rtp']}-{recv['client_rtcp']};server_port=5000-5001\r\n
       \r\n
 - recv:
     flow: c2s

@@ -318,16 +318,16 @@ def create_packet(act):
     # udp/tcp
     if (fl.proto == "tcp"):
         pkt = ip_layr/TCP(sport=int(fl.sport), dport=int(fl.dport), ack=fl.ack, seq=fl.seq, window=65535)
+        if act.get('flags',None):
+            pkt[TCP].flags= act['flags']
+            if 'S' in act['flags']:
+                fl.seq=1
+        if hasattr(fl, 'mss'):
+            pkt[TCP].options = [('MSS',fl.mss)]
     else:
         pkt = ip_layr/UDP(sport=int(fl.sport), dport=int(fl.dport))
 
 
-    if act.get('flags',None):
-        pkt[TCP].flags= act['flags']
-        if 'S' in act['flags']:
-            fl.seq=1
-            if hasattr(fl, 'mss'):
-                pkt[TCP].options = [('MSS',fl.mss)]
 
     # Raw
     if 'data' in act:
@@ -518,9 +518,9 @@ def do_connect(act, c):
     peer_flname = act['peer_flow']
     peer_fl = flows[peer_flname]
 
-    if fl.proto == peer_fl.proto == 'udp':
+    if fl.proto.lower() == peer_fl.proto.lower() == 'udp':
         return c+1
-    elif fl.proto != peer_fl.proto:
+    elif fl.proto.lower() != peer_fl.proto.lower():
         raise Error("connect protocol mismatch")
 
     exec1 = f"{peer_flname}.dst =  pkt[IP].src"

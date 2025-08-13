@@ -3,7 +3,7 @@ flows:
   's2c':
      proto: udp
      src: 10.1.1.49
-     sport: 5500
+     sport: 5060
 
   'c2s':
      proto: udp
