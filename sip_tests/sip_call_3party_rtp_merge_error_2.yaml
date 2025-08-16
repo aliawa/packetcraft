@@ -9,13 +9,13 @@ flows:
     # Source nat testing
   'c2s':
     src: 192.168.1.1
-    sport: 'random(5000-7000)'
+    sport: 'random_num(5000,7000)'
     dst: 10.1.1.1
     dport: 5060
 
   'c2s_via':
     src: 192.168.1.4
-    sport: 'random(5000-7000)'
+    sport: 'random_num(5000,7000)'
 
   's2c':
     src: 10.1.1.1
@@ -25,13 +25,13 @@ flows:
     sport: 5070
   'c2s_rtp':
     src: 192.168.1.2
-    sport: 'random(16000-18000)'
+    sport: 'random_num(16000,18000)'
   'c2s_contact':
     src: 192.168.1.3
-    sport: 'random(16000-18000)'
+    sport: 'random_num(16000,18000)'
   's2c_rtp':
     src: 10.1.1.2
-    sport: 'random(16000-18000)'
+    sport: 'random_num(16000,18000)'
   's2c_rtcp':
     src: s2c_rtp.src
     sport: s2c_rtp.sport + 1
@@ -64,10 +64,10 @@ scenario:
     - 'To: (?P<to>.*)\r\n'
     - 'Contact:\s*<sip:[^@]+@(?P<contact_ip>[\d.]+):(?P<contact_port>\d+)'
     exec:
-    - s2c.dst=client_ip
-    - s2c.dport=client_port
-    - s2c_contact.dst=contact_ip
-    - s2c_contact.dport=contact_port
+    - s2c.dst=recv['client_ip']
+    - s2c.dport=recv['client_port']
+    - s2c_contact.dst=recv['contact_ip']
+    - s2c_contact.dport=recv['contact_port']
 
 - send:
     flow: s2c
@@ -101,12 +101,12 @@ scenario:
     - c=IN IP4 (?P<rtp_dst>.*)\r\n
     - m=audio (?P<rtp_dport>\d+)
     exec:
-    - c2s_rtp.dst=rtp_dst
-    - c2s_rtp.dport=rtp_dport
-    - c2s_rtcp.dst=rtp_dst
-    - c2s_rtcp.dport=rtp_dport+1
-    - c2s.dst=contact_ip
-    - c2s.dport=contact_port
+    - c2s_rtp.dst=recv['rtp_dst']
+    - c2s_rtp.dport=recv['rtp_dport']
+    - c2s_rtcp.dst=recv['rtp_dst']
+    - c2s_rtcp.dport=recv['rtp_dport+1']
+    - c2s.dst=recv['contact_ip']
+    - c2s.dport=recv['contact_port']
 
 - send:
     flow: c2s_rtp
@@ -152,8 +152,8 @@ scenario:
     - c=IN IP4 (?P<rtp_dst>.*)\r\n
     - m=audio (?P<rtp_dport>\d+)
     exec:
-    - s2c_rtp.dst=rtp_dst
-    - s2c_rtp.dport=rtp_dport
+    - s2c_rtp.dst=recv['rtp_dst']
+    - s2c_rtp.dport=recv['rtp_dport']
 
 - send:
     flow: s2c_rtp
