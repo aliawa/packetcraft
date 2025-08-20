@@ -190,6 +190,9 @@ def l3_l4_match(pkt, fl, act):
         if (fl.sport and int(fl.sport) != int(pkt[TCP].dport)):
             genlog.debug("packet dport no match expecting {} != pkt dport {}".format(fl.sport, pkt[TCP].dport))
             return False
+        if ("flags" in act  and act['flags'] != pkt[TCP].flags):
+            genlog.debug("flags no match, expecting {}".format(pkt[TCP].flags))
+            return False
     elif (fl.proto == 'udp'):
         if (not pkt.haslayer(UDP)):
             genlog.debug("proto no match, expecting UDP")
@@ -197,10 +200,6 @@ def l3_l4_match(pkt, fl, act):
         if (fl.sport and int(fl.sport) != int (pkt[UDP].dport)):
             genlog.debug("packet dport no match expecting {} != pkt dport {}".format(fl.sport, pkt[UDP].dport))
             return False
-
-    if ("flags" in act  and act['flags'] != pkt[TCP].flags):
-        genlog.debug("flags no match, expecting {}".format(pkt[TCP].flags))
-        return False
 
     return True
 
@@ -698,7 +697,7 @@ def init(logl):
     setup_logging(logl)
 
 
-def setup(flows_dict, routes_f, route_type, params_f, pcap_f, proto):
+def setup(flows_dict, routes_f, params_f, pcap_f, proto):
     # global dicts
     global routing
     global routing_type
@@ -712,13 +711,14 @@ def setup(flows_dict, routes_f, route_type, params_f, pcap_f, proto):
 
 
     # routing
-    routing_type = route_type
     ip2dev_tbl = dict()
     with open(routes_f, 'r') as f:
         routing = yaml.safe_load(f)
         for dev_name, ips in routing['interfaces'].items():
             for x in ips:
                 ip2dev_tbl[x] = dev_name
+        # source routing is default
+        routing_type = Routing.dest if routing['type'] == "dest" else Routing.source
 
     if params_f:
         with open(params_f, 'r') as f:
