@@ -176,7 +176,6 @@ def l3_l4_match(pkt, fl, act):
 
     if (not pkt.haslayer(IP)):
         handle_non_ip(pkt)
-
         return False
 
     if (fl.src and fl.src != pkt[IP].dst):
