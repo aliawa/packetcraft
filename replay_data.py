@@ -601,6 +601,13 @@ def do_execute(act, c):
     return c+1
 
 
+def do_noop(act, c):
+    if 'name' in act:
+        globals()[act['name']] = c
+    return c+1
+
+
+
 # --------------------------------------------------------------------------
 #                                  DRIVER
 # --------------------------------------------------------------------------
@@ -614,7 +621,8 @@ actions = {
         "loop-end"   : do_loop_end,
         "save"       : do_save,
         "execute"    : do_execute,
-        "connect"    : do_connect
+        "connect"    : do_connect,
+        "noop"       : do_noop
         }
 
 
@@ -792,9 +800,9 @@ if __name__ == '__main__':
 
     try:
         if args.src_routes:
-            setup(scen_dict['flows'], args.src_routes, Routing.source, args.params, fname, args.proto)
+            setup(scen_dict['flows'], args.src_routes, args.params, fname, args.proto)
         else:
-            setup(scen_dict['flows'], args.dst_routes, Routing.dest, args.params, fname, args.proto)
+            setup(scen_dict['flows'], args.dst_routes, args.params, fname, args.proto)
        
 
     except KeyError as inst:
