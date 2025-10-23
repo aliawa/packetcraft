@@ -4,7 +4,7 @@ ubuntu
     pip		    apt install python3-pip
     scapy	    apt install python3-scapy
     pyyaml
-    textwrap3	python3 -m pip install textwrap3
+    textwrap3	    python3 -m pip install textwrap3
 
 macos:
     python3 -m venv pyvenv
@@ -13,7 +13,7 @@ macos:
     python -m pip install ruamel.yaml                # needed for pcap_flow.py
 
 virtual environment
-    pip		    apt install python3-pip
-    scapy	    python3 -m pip install scapy
+    pip		apt install python3-pip
+    scapy	python3 -m pip install scapy
     pyyaml      python3 -m pip install pyyaml
     textwrap3	python3 -m pip install textwrap3
