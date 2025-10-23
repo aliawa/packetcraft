@@ -169,35 +169,35 @@ def handle_non_ip(pkt):
 
 def l3_l4_match(pkt, fl, act):
     if (fl.intf != pkt.sniffed_on):
-        genlog.debug("intf no match expecting {} != pkt {}".format(fl.intf, pkt.sniffed_on))
+        genlog.debug(f"intf no match expecting {fl.intf} found {pkt.sniffed_on}")
         return False
     else:
-        genlog.debug("intf match expecting {} = pkt {}".format(fl.intf, pkt.sniffed_on))
+        genlog.debug(f"intf match expecting {fl.intf} found {pkt.sniffed_on}")
 
     if (not pkt.haslayer(IP)):
         handle_non_ip(pkt)
         return False
 
     if (fl.src and fl.src != pkt[IP].dst):
-        genlog.debug("dst no match {} != pkt {}".format(fl.src, pkt[IP].dst))
+        genlog.debug(f"dst no match, expecting {fl.src} found {pkt[IP].dst}")
         return False
 
     if (fl.proto == 'tcp'):
         if (not pkt.haslayer(TCP)):
-            genlog.debug("proto no match, expecting TCP")
+            genlog.debug(f"proto no match, expecting TCP found {pkt[IP].proto}")
             return False
         if (fl.sport and int(fl.sport) != int(pkt[TCP].dport)):
-            genlog.debug("packet dport no match expecting {} != pkt dport {}".format(fl.sport, pkt[TCP].dport))
+            genlog.debug(f"packet dport no match, expecting {fl.sport} found {pkt[TCP].dport}")
             return False
         if ("flags" in act  and act['flags'] != pkt[TCP].flags):
-            genlog.debug("flags no match, expecting {}".format(pkt[TCP].flags))
+            genlog.debug(f"flags no match, expecting \"{act['flags']}\" found \"{pkt[TCP].flags}\"")
             return False
     elif (fl.proto == 'udp'):
         if (not pkt.haslayer(UDP)):
-            genlog.debug("proto no match, expecting UDP")
+            genlog.debug(f"proto no match, expecting TCP found {pkt[IP].proto}")
             return False
         if (fl.sport and int(fl.sport) != int (pkt[UDP].dport)):
-            genlog.debug("packet dport no match expecting {} != pkt dport {}".format(fl.sport, pkt[UDP].dport))
+            genlog.debug("packet dport no match expecting {fl.sport} found {pkt[UDP].dport}")
             return False
 
     return True
@@ -725,7 +725,7 @@ def setup(flows_dict, routes_f, params_f, pcap_f, proto):
             for x in ips:
                 ip2dev_tbl[x] = dev_name
         # source routing is default
-        routing_type = Routing.dest if routing['type'] == "dest" else Routing.source
+        routing_type = Routing.dest if 'type' in routing and routing['type'] == "dest" else Routing.source
 
     if params_f:
         with open(params_f, 'r') as f:
