@@ -2,7 +2,7 @@
 
 import argparse
 from scapy.all import *
-from sip_parser.sip_message import SipMessage
+from sip_parser.sip_message import SipMessage,SipParseError
 
 import pdb
 
@@ -46,13 +46,20 @@ def pcapfilter(args, p):
         return False     # only works for UDP or TCP
 
     if args.sip:
+        if not Raw in p:
+            return False
         ls = args.sip.split('=')
-        sip_msg = SipMessage.from_string(p[Raw].load.decode('utf-8'))
-        key = ls[0].split('.')
-        dkey="sip_msg.headers"
-        for k in key:
-            dkey += ".get('" + k.lower() + "')"
-        if str(eval(dkey)) != ls[1]:
+        try:
+            sip_msg = SipMessage.from_string(p[Raw].load.decode('utf-8'))
+            key = ls[0].split('.')
+            dkey="sip_msg.headers"
+            for k in key:
+                dkey += ".get('" + k.lower() + "')"
+            if str(eval(dkey)) != ls[1]:
+                return False
+        except UnicodeDecodeError:
+            return False
+        except SipParseError:
             return False
 
     return True;
@@ -62,10 +69,7 @@ pcap = rdpcap(args.pcap).filter(lambda p: pcapfilter(args, p))
 
 for pkt in pcap:
     if Raw in pkt:
-        try: 
-            print (pkt[Raw].load.decode('utf-8'))
-        except UnicodeDecodeError:
-            print ("-- Error --")
+        print (pkt[Raw].load.decode('utf-8'))
 
 
 

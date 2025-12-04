@@ -1,23 +1,21 @@
 #--------------------------------------------------------------------#
 |                                                                    |
-|                       pcap_flow.py                            |
+|                       pcap_flow.py                                 |
 |                                                                    |
 #--------------------------------------------------------------------#
 
 Required Modules
-----------------------------------------------------------------------
-ruamel                          apt install python3-ruamel.yaml
+    ruamel                          apt install python3-ruamel.yaml
 
+Usage:
+    python3 pcap_flow.py -pc 3286 -ipc 192.168.1.49 -o flow_c2s -r rx tx
 
-
-python3 pcap_flow.py -pc 3286 -ipc 192.168.1.49 -o flow_c2s -r rx tx
-
-The script filters out the stream to plot based on client ip and port. 
-If there is NAT then -pcn and -ipcn must be provided to find the f2s 
-(firewall-to-server) and s2f (server-to-firewall) flows
-
-*   wrong sequence number or wrong ack number
-+   retransmitted packet.
+Description:
+    The script filters out the stream to plot based on client ip and port. 
+    If there is NAT then -pcn and -ipcn must be provided to find the f2s 
+    (firewall-to-server) and s2f (server-to-firewall) flows
+    *   wrong sequence number or wrong ack number
+    +   retransmitted packet.
 
 Output with sip_call using proxy. -flow_c2s
 

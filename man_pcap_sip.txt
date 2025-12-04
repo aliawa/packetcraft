@@ -6,10 +6,13 @@
 
 dependency:
     sip-parser      alxgb/sip-parser
-    pip install sip-parser/src/sip_parser
-
+    pip install git+https://github.com/alxgb/sip-parser#egg=sip-parser
 Usage:
     pcap_sip.py rx.pcap --sip "Call-ID=0022905c-59680003-b6a0cb24-b0fc6828@192.168.30.151"
+    
+Tip:
+    To improve speed you can filter sip with tshark
+    tshark -r rx_26.pcap -Y sip -w abc.pcap
 
 Other fields that can be searched. See the message below and there parsed version 
     REFER sip:192.168.40.135 SIP/2.0^M
