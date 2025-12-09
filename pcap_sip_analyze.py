@@ -4,6 +4,7 @@ import sys # Import the sys module to handle command-line arguments
 import argparse
 import re
 from typing import Iterator, List
+import difflib
 
 def sip_key(pkt):
     key = pkt.sip.via_branch 
@@ -24,10 +25,10 @@ def print_pkt(pkt, file=None, pre="   "):
         src_port = pkt[pkt.transport_layer].srcport
         dst_ip   = pkt.ip.dst
         dst_port = pkt[pkt.transport_layer].dstport
-        if file:
-            print(f"{pre} {src_ip}/{src_port} --> {dst_ip}/{dst_port}/{protocol} -> [{file}]")
-        else:
-            print(f"{pre} {src_ip}/{src_port} --> {dst_ip}/{dst_port}/{protocol} ")
+        # if file:
+        print(f"{pre} [{int(pkt.ip.id,16)}] {src_ip}/{src_port} -> {dst_ip}/{dst_port} {protocol} [{file}]")
+        # else:
+        #     print(f"{pre} {src_ip}/{src_port} --> {dst_ip}/{dst_port}/{protocol} ")
         if hasattr(pkt.sip, "method"):
             print(f"    {pkt.sip.request_line}")
         else:
@@ -56,26 +57,6 @@ def find_pkt(pkt, filehash):
     return None
 
 
-def parse_sip_packets(pcap_file, filehash, logname, loghash):
-    capture = pyshark.FileCapture(
-        input_file=pcap_file,
-        display_filter='sip',
-        only_summaries=False,
-        keep_packets=False
-    )
-    for pkt in capture:
-        if 'sip' in pkt:
-            print_pkt(pkt, pcap_file, pre="-->")
-            proc_pkt = find_pkt(pkt, filehash )
-            if proc_pkt:
-                print_pkt(proc_pkt[0], proc_pkt[1], pre="<--")
-
-            if (logname):
-                logkey = f"{pkt.ip.src}{pkt[pkt.transport_layer].srcport}{pkt.ip.dst}{pkt[pkt.transport_layer].dstport}{int(pkt.ip.id,16)}"
-                if logkey in loghash:
-                    print (f"<-- {logname}: {loghash[logkey]}")
-                    print()
-                
 
 
 HEADER_RE = re.compile(r"^== 20\d\d-\d\d-\d\d \d\d:\d\d:\d\d\.\d\d\d -0\d\d\d ==$")
@@ -96,7 +77,6 @@ def panlog_read_block(path: str) -> Iterator[List[str]]:
                     buf = [line]
             else:
                 if line == "":
-                    # print (f"yield {hlinenr}")
                     yield (hlinenr, buf)
                     collecting = False
                     buf = []
@@ -106,20 +86,15 @@ def panlog_read_block(path: str) -> Iterator[List[str]]:
             yield (hlinenr, buf)
 
 
-def process_block(lines: List[str], lnr:int, xhash:dict) -> None:
+def process_block(lines: List[str], lnr:int, xhash:dict, re_srch) -> None:
     text = "\n".join(lines)
-
-    IP_RE = re.compile(r'IP:\s+(?P<saddr>\d+.\d+.\d+.\d+)->(?P<daddr>\d+.\d+.\d+.\d+), protocol \d\n'
-                       r'\s+version \d, ihl \d, tos 0x\d\d, len \d+,\n'
-                       r'\s+id (?P<ipid>\d+), frag_off 0x\d+, ttl \d+, checksum \d+\(0x\w+\)\n'
-                       r'TCP:\s+sport (?P<sport>\d+), dport (?P<dport>\d+),')
-    match = IP_RE.search(text)
+    match = re_srch.search(text)
     if match:
         key=f"{match.group('saddr')}{match.group('sport')}{match.group('daddr')}{match.group('dport')}{match.group('ipid')}"
+        # print (f"stored: {key}")
         xhash[key] = lnr
-
-
-
+    # else:
+    #     print (f"no match:{lnr}")
 
 
 def hash_pcaps(pcap):
@@ -144,6 +119,30 @@ def hash_pcaps(pcap):
                     xhash[key] = [i]
         return capture, xhash
 
+
+
+def parse_sip_packets(pcap_file, filehash, logname, loghash):
+    capture = pyshark.FileCapture(
+        input_file=pcap_file,
+        display_filter='sip',
+        only_summaries=False,
+        keep_packets=False
+    )
+    for pkt in capture:
+        if 'sip' in pkt:
+            print_pkt(pkt, pcap_file, pre="-->")
+            proc_pkt = find_pkt(pkt, filehash )
+            if proc_pkt:
+                print_pkt(proc_pkt[0], proc_pkt[1], pre="<--")
+
+            if (logname):
+                logkey = f"{pkt.ip.src}{pkt[pkt.transport_layer].srcport}{pkt.ip.dst}{pkt[pkt.transport_layer].dstport}{int(pkt.ip.id,16)}"
+                # print (f"search: {logkey}")
+                if logkey in loghash:
+                    print (f"<-- {logname}: {loghash[logkey]}")
+                    print()
+                
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--log', type=str, help="log file name")
@@ -159,8 +158,12 @@ if __name__ == "__main__":
 
     loghash = {}
     if (args.log):
+        IP_RE = re.compile(r'IP:\s+(?P<saddr>\d+.\d+.\d+.\d+)->(?P<daddr>\d+.\d+.\d+.\d+), protocol \d+\n'
+                           r'\s+version \d, ihl \d, tos 0x[0-9a-fA-F]+, len \d+,\n'
+                           r'\s+id (?P<ipid>\d+), frag_off 0x\d+, ttl \d+, checksum \d+\(0x\w+\)\n'
+                           r'[TU][CD]P:\s+sport (?P<sport>\d+), dport (?P<dport>\d+),')
         for lnr, block in panlog_read_block(args.log):
-            process_block(block, lnr, loghash)
+            process_block(block, lnr, loghash, IP_RE)
 
     if not os.path.exists(args.pcaps[0]):
         print(f"Error: PCAP file not found at '{pcap_file_path}'")
