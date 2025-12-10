@@ -5,6 +5,11 @@ import argparse
 import re
 from typing import Iterator, List
 import difflib
+from rich.console import Console
+from rich.table import Table
+from rich import box
+from rich import print
+# from colorama import Fore, Style
 
 def sip_key(pkt):
     key = pkt.sip.via_branch 
@@ -19,20 +24,22 @@ def pcap_walk_hash(pkt, idx, xhash):
         key = sip_key(pkt)
         xhash[key] = idx
 
-def print_pkt(pkt, file=None, pre="   "):
+def print_pkt(pkt, lst, file=None):
         protocol = pkt.transport_layer
         src_ip   = pkt.ip.src
         src_port = pkt[pkt.transport_layer].srcport
         dst_ip   = pkt.ip.dst
         dst_port = pkt[pkt.transport_layer].dstport
-        # if file:
-        print(f"{pre} [{int(pkt.ip.id,16)}] {src_ip}/{src_port} -> {dst_ip}/{dst_port} {protocol} [{file}]")
-        # else:
-        #     print(f"{pre} {src_ip}/{src_port} --> {dst_ip}/{dst_port}/{protocol} ")
+
+        line = fr"\[{int(pkt.ip.id,16)}] {src_ip}/{src_port} -> {dst_ip}/{dst_port} {protocol} \[{file}]"
+        lst.append(line)
+
         if hasattr(pkt.sip, "method"):
-            print(f"    {pkt.sip.request_line}")
+            line = f"{pkt.sip.request_line}"
         else:
-            print(f"    {pkt.sip.status_line}")
+            line = f"{pkt.sip.status_line}"
+        lst.append(line)
+
         headers = {'via':'Via',
                    'contact':'Contact', 
                    'cseq':'CSeq', 
@@ -44,8 +51,8 @@ def print_pkt(pkt, file=None, pre="   "):
             if val:
                 if name == 'contact':
                     val = val.split(';',1)[0]
-                print(f"    {pname}: {val}")
-        print()
+                line = f"{pname}: {val}"
+                lst.append(line)
 
 
 def find_pkt(pkt, filehash):
@@ -96,6 +103,32 @@ def process_block(lines: List[str], lnr:int, xhash:dict, re_srch) -> None:
     # else:
     #     print (f"no match:{lnr}")
 
+def print_diff(lst1, lst2, outlst):
+    dfr = difflib.Differ()
+    if len(lst2) == 0:
+        return
+
+    for lhs, rhs in zip(lst1, lst2):
+        result = list(dfr.compare(lhs.split(), rhs.split()))
+        seq1 = []
+        seq2 = []
+
+        for line in result:
+            txt = line.split(" ", 1)
+            if txt[0] == '-':
+                seq1.append(txt[1].strip())
+            elif txt[0] == '+':
+                seq2.append(f"[yellow]{txt[1].strip()}[/]")
+            elif txt[0] == '?':
+                pass
+            else:
+                seq1.append(txt[1].strip())
+                seq2.append(txt[1].strip())
+        lhs_str = ' '.join(seq1)
+        rhs_str  = ' '.join(seq2)
+        outlst.append(rhs_str)
+        # print(f"{lhs_str}    {rhs_str}")
+
 
 def hash_pcaps(pcap):
         xhash = {}
@@ -120,32 +153,64 @@ def hash_pcaps(pcap):
         return capture, xhash
 
 
+def print_table(table, lst1, lst2, log):
+    txt1 = "\n".join(lst1)
+    txt2 = "\n".join(lst2)
+    if (len(table.columns) == 2):
+        table.add_row(txt1, txt2)
+    if (len(table.columns) == 3):
+        table.add_row(txt1,txt2,str(log))
 
-def parse_sip_packets(pcap_file, filehash, logname, loghash):
+def rich_table_init(logname):
+    table = Table(title=None, leading=1, box=box.HORIZONTALS)
+    table.add_column("rx", no_wrap=False)
+    table.add_column("tx")
+    if logname:
+        table.add_column("log", min_width=5)
+    return table
+
+
+def process_packets(pcap_file, filehash, logname, loghash, bcolor):
     capture = pyshark.FileCapture(
         input_file=pcap_file,
         display_filter='sip',
         only_summaries=False,
         keep_packets=False
     )
+
+    # initilize table
+    table = rich_table_init(logname)
+
     for pkt in capture:
+        lst1 = []
+        lst2 = []
         if 'sip' in pkt:
-            print_pkt(pkt, pcap_file, pre="-->")
+            print_pkt(pkt, lst1)
             proc_pkt = find_pkt(pkt, filehash )
             if proc_pkt:
-                print_pkt(proc_pkt[0], proc_pkt[1], pre="<--")
+                print_pkt(proc_pkt[0], lst2, proc_pkt[1])
+
+            lst2_diff=[]
+            print_diff(lst1, lst2, lst2_diff)
 
             if (logname):
                 logkey = f"{pkt.ip.src}{pkt[pkt.transport_layer].srcport}{pkt.ip.dst}{pkt[pkt.transport_layer].dstport}{int(pkt.ip.id,16)}"
-                # print (f"search: {logkey}")
                 if logkey in loghash:
-                    print (f"<-- {logname}: {loghash[logkey]}")
-                    print()
+                    lognr = loghash[logkey]
                 
+            print_table(table, lst1, lst2_diff, lognr)
+
+    term_opt = None
+    if bcolor == "always":
+        term_opt = True
+    console = Console(force_terminal=term_opt)
+    console.print(table)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--log', type=str, help="log file name")
+    parser.add_argument('--color', type=str, choices=['always','auto'], help="color")
     parser.add_argument('pcaps', nargs='*', help='pcap files')
     args = parser.parse_args()
 
@@ -168,7 +233,7 @@ if __name__ == "__main__":
     if not os.path.exists(args.pcaps[0]):
         print(f"Error: PCAP file not found at '{pcap_file_path}'")
     else:
-        parse_sip_packets(args.pcaps[0], filehash, args.log, loghash)
+        process_packets(args.pcaps[0], filehash, args.log, loghash, args.color)
 
             
 
