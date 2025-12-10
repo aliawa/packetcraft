@@ -31,7 +31,11 @@ def print_pkt(pkt, lst, file=None):
         dst_ip   = pkt.ip.dst
         dst_port = pkt[pkt.transport_layer].dstport
 
-        line = fr"\[{int(pkt.ip.id,16)}] {src_ip}/{src_port} -> {dst_ip}/{dst_port} {protocol} \[{file}]"
+        if file:
+            line = fr"\[{int(pkt.ip.id,16)}] {src_ip}/{src_port} -> {dst_ip}/{dst_port} {protocol} \[{file}]"
+        else:
+            line = fr"\[{int(pkt.ip.id,16)}] {src_ip}/{src_port} -> {dst_ip}/{dst_port} {protocol}"
+
         lst.append(line)
 
         if hasattr(pkt.sip, "method"):
@@ -193,6 +197,7 @@ def process_packets(pcap_file, filehash, logname, loghash, bcolor):
             lst2_diff=[]
             print_diff(lst1, lst2, lst2_diff)
 
+            lognr = 0
             if (logname):
                 logkey = f"{pkt.ip.src}{pkt[pkt.transport_layer].srcport}{pkt.ip.dst}{pkt[pkt.transport_layer].dstport}{int(pkt.ip.id,16)}"
                 if logkey in loghash:
