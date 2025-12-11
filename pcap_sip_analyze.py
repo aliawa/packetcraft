@@ -111,6 +111,7 @@ def process_block(text, lnr:int, xhash:dict, re_srch) -> None:
 def print_diff(lst1, lst2, outlst):
     dfr = difflib.Differ()
     if len(lst2) == 0:
+        outlst.append("[red]\[missing][/]")
         return
 
     for lhs, rhs in zip(lst1, lst2):
@@ -132,7 +133,7 @@ def print_diff(lst1, lst2, outlst):
         lhs_str = ' '.join(seq1)
         rhs_str  = ' '.join(seq2)
         outlst.append(rhs_str)
-        # print(f"{lhs_str}    {rhs_str}")
+
 
 
 def hash_pcaps(pcap):
@@ -256,6 +257,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--log', type=str, help="log file name")
     parser.add_argument('--color', type=str, choices=['always','auto'], help="color")
-    parser.add_argument('pcaps', nargs='*', help='pcap files')
+    parser.add_argument('pcaps', nargs='+', help='pcap files')
     main (parser.parse_args())
 
