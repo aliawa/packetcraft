@@ -9,7 +9,10 @@ from rich.console import Console
 from rich.table import Table
 from rich import box
 from rich import print
-# from colorama import Fore, Style
+import shutil
+
+log_output_dir = "panlog_segs"
+
 
 def sip_key(pkt):
     key = pkt.sip.via_branch 
@@ -70,42 +73,40 @@ def find_pkt(pkt, filehash):
 
 
 
-HEADER_RE = re.compile(r"^== 20\d\d-\d\d-\d\d \d\d:\d\d:\d\d\.\d\d\d -0\d\d\d ==$")
-linenr=0
 
-def panlog_read_block(path: str) -> Iterator[List[str]]:
-    with open(path, "r", encoding="utf-8") as f:
-        collecting = False
-        global linenr
-        buf: List[str] = []
-        for raw in f:
-            linenr = linenr +1
-            line = raw.rstrip("\n")
-            if not collecting:
-                if HEADER_RE.match(line):
-                    collecting = True
-                    hlinenr = linenr
-                    buf = [line]
-            else:
-                if line == "":
-                    yield (hlinenr, buf)
-                    collecting = False
-                    buf = []
+TIMESTAMP_PATTERN = re.compile(r"^== \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} -0800 ==$")
+
+def panlog_read_block(path: str):
+    current_block = []
+    linenr=0
+    with open(path, 'r') as f:
+            for line in f:
+                linenr+=1
+                if TIMESTAMP_PATTERN.match(line):
+                    # When a new pattern is found, yield the completed previous block
+                    if current_block:
+                        yield linenr, "".join(current_block)
+                    # Start a new block with the current matching line
+                    current_block = [line]
                 else:
-                    buf.append(line)
-        if collecting and buf:
-            yield (hlinenr, buf)
+                    # Append non-pattern lines to the current block
+                    current_block.append(line)
+            
+            # Yield the very last block after the loop finishes
+            if current_block:
+                yield linenr, "".join(current_block)
 
 
-def process_block(lines: List[str], lnr:int, xhash:dict, re_srch) -> None:
-    text = "\n".join(lines)
+
+def process_block(text, lnr:int, xhash:dict, re_srch) -> None:
     match = re_srch.search(text)
     if match:
         key=f"{match.group('saddr')}{match.group('sport')}{match.group('daddr')}{match.group('dport')}{match.group('ipid')}"
-        # print (f"stored: {key}")
         xhash[key] = lnr
-    # else:
-    #     print (f"no match:{lnr}")
+        return True
+    else:
+        return False
+
 
 def print_diff(lst1, lst2, outlst):
     dfr = difflib.Differ()
@@ -212,12 +213,16 @@ def process_packets(pcap_file, filehash, logname, loghash, bcolor):
     console.print(table)
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--log', type=str, help="log file name")
-    parser.add_argument('--color', type=str, choices=['always','auto'], help="color")
-    parser.add_argument('pcaps', nargs='*', help='pcap files')
-    args = parser.parse_args()
+def save_block(block, lnr):
+    output_path = os.path.join(log_output_dir, f"{lnr}.txt")
+    with open(output_path, 'w') as out_f:
+        out_f.write(block)
+
+
+def main (args):
+    if not os.path.exists(args.pcaps[0]):
+        print(f"Error: PCAP file not found at '{pcap_file_path}'")
+        return
 
     filehash = {}
     for f in args.pcaps[1:]:
@@ -228,19 +233,29 @@ if __name__ == "__main__":
 
     loghash = {}
     if (args.log):
+        if os.path.exists(log_output_dir):
+            try:
+                shutil.rmtree(log_output_dir)
+            except OSError as e:
+                print(f"Error removing directory {directory_path}: {e}")
+                return
+        os.makedirs(log_output_dir)
+
         IP_RE = re.compile(r'IP:\s+(?P<saddr>\d+.\d+.\d+.\d+)->(?P<daddr>\d+.\d+.\d+.\d+), protocol \d+\n'
                            r'\s+version \d, ihl \d, tos 0x[0-9a-fA-F]+, len \d+,\n'
                            r'\s+id (?P<ipid>\d+), frag_off 0x\d+, ttl \d+, checksum \d+\(0x\w+\)\n'
                            r'[TU][CD]P:\s+sport (?P<sport>\d+), dport (?P<dport>\d+),')
         for lnr, block in panlog_read_block(args.log):
-            process_block(block, lnr, loghash, IP_RE)
+            if process_block(block, lnr, loghash, IP_RE):
+                save_block(block, lnr)
 
-    if not os.path.exists(args.pcaps[0]):
-        print(f"Error: PCAP file not found at '{pcap_file_path}'")
-    else:
-        process_packets(args.pcaps[0], filehash, args.log, loghash, args.color)
-
-            
+    process_packets(args.pcaps[0], filehash, args.log, loghash, args.color)
 
 
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--log', type=str, help="log file name")
+    parser.add_argument('--color', type=str, choices=['always','auto'], help="color")
+    parser.add_argument('pcaps', nargs='*', help='pcap files')
+    main (parser.parse_args())
 
