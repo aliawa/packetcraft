@@ -10,6 +10,7 @@ import ipaddress
 import inspect
 from dataclasses import dataclass, field, InitVar
 import textwrap
+from pathlib import Path
 
 logging.getLogger("scapy").setLevel(logging.CRITICAL)
 from scapy.all import *
@@ -34,34 +35,6 @@ from ruamel.yaml import YAML
 #   |  f2c   ||  s2f   |
 #   | <----- || <----- |
 #   |        ||        |
-
-
-cmdln_parsr = argparse.ArgumentParser()
-cmdln_parsr.add_argument('rx')
-cmdln_parsr.add_argument('tx')
-cmdln_parsr.add_argument('-p','--proto', choices=['udp','tcp'])
-cmdln_parsr.add_argument('-pc','--clntport', type=int, required=True)
-cmdln_parsr.add_argument('-ps','--srvrport', type=int)
-cmdln_parsr.add_argument('-ipc','--clntip', required=True)
-cmdln_parsr.add_argument('-ips','--srvrip')
-cmdln_parsr.add_argument('-pcn','--clntport_n', type=int)
-cmdln_parsr.add_argument('-psn','--srvrport_n', type=int)
-cmdln_parsr.add_argument('-ipcn','--clntip_n')
-cmdln_parsr.add_argument('-ipsn','--srvrip_n')
-cmdln_parsr.add_argument('-r', '--rel-seq',  action='store_true')
-cmdln_parsr.add_argument('-hdr', '--no-headers',  action='store_true')
-cmdln_parsr.add_argument('-o', '--output',  choices=['flow_c2s', 'flow_s2c', 'detail_c2s', 'detail_s2c', 'scenario'], required=True)
-
-args = cmdln_parsr.parse_args()
-
-if not args.clntport_n:
-    args.clntport_n = args.clntport
-if not args.srvrip_n:
-    args.srvrip_n = args.srvrip
-if not args.clntip_n:
-    args.clntip_n = args.clntip
-if not args.srvrport_n:
-    args.srvrport_n = args.srvrport
 
 
 def rxfilter_tcp(args, p):
@@ -178,7 +151,8 @@ class MyPackt:
     @property
     def len(self):
         if TCP in self.spkt:
-            return len(self.spkt[TCP].payload) if Raw in self.spkt else 0
+            return self.spkt[IP].len - (self.spkt[IP].ihl*4) - (self.spkt[TCP].dataofs*4)
+            # return len(self.spkt[TCP].payload) if Raw in self.spkt else 0
         else:
             return len(self.spkt[UDP].payload) if Raw in self.spkt else 0
 
@@ -427,6 +401,43 @@ def repr_str(dumper: RoundTripRepresenter, data: str):
 # ----------------------------------------------------------------------
 #                                 MAIN
 # ----------------------------------------------------------------------
+
+cmdln_parsr = argparse.ArgumentParser()
+cmdln_parsr.add_argument('rx')
+cmdln_parsr.add_argument('tx')
+cmdln_parsr.add_argument('-p','--proto', choices=['udp','tcp'])
+cmdln_parsr.add_argument('-pc','--clntport', type=int, required=True)
+cmdln_parsr.add_argument('-ps','--srvrport', type=int)
+cmdln_parsr.add_argument('-ipc','--clntip', required=True)
+cmdln_parsr.add_argument('-ips','--srvrip')
+cmdln_parsr.add_argument('-pcn','--clntport_n', type=int)
+cmdln_parsr.add_argument('-psn','--srvrport_n', type=int)
+cmdln_parsr.add_argument('-ipcn','--clntip_n')
+cmdln_parsr.add_argument('-ipsn','--srvrip_n')
+cmdln_parsr.add_argument('-r', '--rel-seq',  action='store_true')
+cmdln_parsr.add_argument('-hdr', '--no-headers',  action='store_true')
+cmdln_parsr.add_argument('-o', '--output',  choices=['flow_c2s', 'flow_s2c', 'detail_c2s', 'detail_s2c', 'scenario'], required=True)
+
+args = cmdln_parsr.parse_args()
+
+
+
+if not Path(args.rx).is_file():
+    print(f"Error: {args.rx} not found")
+    exit()
+if not Path(args.tx).is_file():
+    print(f"Error: {args.tx} not found")
+    exit()
+
+if not args.clntport_n:
+    args.clntport_n = args.clntport
+if not args.srvrip_n:
+    args.srvrip_n = args.srvrip
+if not args.clntip_n:
+    args.clntip_n = args.clntip
+if not args.srvrport_n:
+    args.srvrport_n = args.srvrport
+
 
 # Global Flow state database
 Flows = {'c2f': FlowState('c2f', 'f2c'),

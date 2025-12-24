@@ -78,6 +78,7 @@ TIMESTAMP_PATTERN = re.compile(r"^== \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} 
 
 def panlog_read_block(path: str):
     current_block = []
+    startln=0
     linenr=0
     with open(path, 'r') as f:
             for line in f:
@@ -85,8 +86,9 @@ def panlog_read_block(path: str):
                 if TIMESTAMP_PATTERN.match(line):
                     # When a new pattern is found, yield the completed previous block
                     if current_block:
-                        yield linenr, "".join(current_block)
+                        yield startln , "".join(current_block)
                     # Start a new block with the current matching line
+                    startln = linenr
                     current_block = [line]
                 else:
                     # Append non-pattern lines to the current block
@@ -94,7 +96,7 @@ def panlog_read_block(path: str):
             
             # Yield the very last block after the loop finishes
             if current_block:
-                yield linenr, "".join(current_block)
+                yield startln, "".join(current_block)
 
 
 
@@ -111,7 +113,7 @@ def process_block(text, lnr:int, xhash:dict, re_srch) -> None:
 def print_diff(lst1, lst2, outlst):
     dfr = difflib.Differ()
     if len(lst2) == 0:
-        outlst.append("[red]\[missing][/]")
+        outlst.append(r"[red on white]\[missing][/]")
         return
 
     for lhs, rhs in zip(lst1, lst2):
@@ -210,8 +212,9 @@ def process_packets(pcap_file, filehash, logname, loghash, bcolor):
     term_opt = None
     if bcolor == "always":
         term_opt = True
-    console = Console(force_terminal=term_opt)
+    console = Console(force_terminal=term_opt, record=True)
     console.print(table)
+    console.save_html("trace.html")
 
 
 def save_block(block, lnr):
