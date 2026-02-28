@@ -27,4 +27,11 @@ sip_invite_converted.yaml
 
 
 
+sip_invite_converted.errors.yaml
+----------------------------------------------------------------------
+1. call-id in 200 ok does not match call-id in invite
+   this tests, no new transaction created for stray response
+2. PRACK has no terminating CRLF which tests malformed sip error
+3. SDP answer cannot be matched with SDP offer, tests unmerged rtp
+
 

@@ -50,7 +50,6 @@ def is_valid_port(port):
 
 class Flow:
     def __init__(self, fl, arg_proto):
-        self.proto   = fl['proto'] if 'proto' in fl else arg_proto
         self.src     = flds_eval(fl['src'])
         self.intf    = ip2dev(self.src)
         self.src_mac = ip2mac(self.src)
@@ -59,7 +58,6 @@ class Flow:
         self.ack     = 0
         self.ooq     = {}   # out of order queue
         self.l7      = {}   # Layer 7 data
-
         self.sport   = flds_eval(fl['sport']) #evalport(fl,'sport')
 
         if 'dst' in fl:
@@ -72,6 +70,15 @@ class Flow:
             self.mss = fl['mss']
         if 'mtu' in fl:
             self.mtu = fl['mtu']
+
+        if arg_proto:
+            self.proto = arg_proto 
+        elif 'proto' in fl:
+            self.proto = fl['proto']
+        else:
+            self.proto = 'udp'
+
+
 
     def __repr__(self):
         d = {x:getattr(self,x) for x in dir(self) if not x.startswith('__')}
@@ -763,6 +770,10 @@ def stop():
 def set_flow(flow_name, attr, val):
     setattr(flows[flow_name], attr, val)
 
+
+def save_recv():
+    with open("recv.yaml", 'w') as file:
+        yaml.dump(globals()['recv'], file, default_flow_style=False, sort_keys=False)
 
 # ---------------------------------------------------------------
 #                              Main

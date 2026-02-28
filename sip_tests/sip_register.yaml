@@ -1,16 +1,16 @@
 # c2s --> REGISTER
 flows:
-  'c2s':
-     proto: udp
-     src: 192.168.1.49
-     sport: 6060
-     dst: 10.1.1.49
-     dport: 5060
-
   's2c':
      proto: udp
      src: 10.1.1.49
      sport: 5060
+
+  'c2s':
+     proto: udp
+     src: 192.168.1.49
+     sport: 6060
+     dst: s2c.src
+     dport: s2c.sport
 
 
 
@@ -38,3 +38,6 @@ scenario:
 - recv:
     flow: s2c
     match: 'REGISTER sip:'
+    search:
+    - 'Contact: <sip:[0-9]+@(?P<contact_ip>[\d.]+):(?P<contact_port>\d+)>'
+
