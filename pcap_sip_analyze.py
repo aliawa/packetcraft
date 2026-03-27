@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import pyshark
 import os
 import sys # Import the sys module to handle command-line arguments
@@ -50,6 +52,7 @@ def print_pkt(pkt, lst, file=None):
         headers = {'via':'Via',
                    'contact':'Contact', 
                    'cseq':'CSeq', 
+                   'call_id':'Call ID',
                    'sdp_media':'m', 
                    'sdp_connection_info':'c'
                    }
@@ -74,7 +77,7 @@ def find_pkt(pkt, filehash):
 
 
 
-TIMESTAMP_PATTERN = re.compile(r"^== \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} -0800 ==$")
+TIMESTAMP_PATTERN = re.compile(r"^== \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} -\d{4} ==$")
 
 def panlog_read_block(path: str):
     current_block = []

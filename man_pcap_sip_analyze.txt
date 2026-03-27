@@ -6,7 +6,7 @@
 
 dependency:
     pyshark
-    pip install pysharkl
+    pip install pyshark
 Usage:
     pcap_sip_analyze.py <rx pcap> <tx pcap> <drop pcap>
 
