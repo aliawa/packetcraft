@@ -132,7 +132,7 @@ scenario:
 
 - send: 
     flow: c2s
-    name: 'inv'
+    load: 'inv'
 
 - recv:
     flow: s2c
@@ -140,7 +140,7 @@ scenario:
 
 - send: 
     flow: s2c
-    name: 'sip_ok'
+    load: 'sip_ok'
 
 - recv:
     flow: c2s

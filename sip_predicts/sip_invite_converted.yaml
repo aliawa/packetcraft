@@ -27,7 +27,7 @@ flows:
   c2s:
     proto: udp
     src: 192.168.2.1
-    sport: 6060 
+    sport: random_num(6000,7000)
     dst: s2c.src
     dport: s2c.sport
   c2s_via:

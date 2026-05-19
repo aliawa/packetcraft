@@ -485,7 +485,7 @@ def do_recv(act, c):
 def do_send(act, c):
     genlog.debug("\n{} called from {}".format(inspect.stack()[0][3],inspect.stack()[1][3]))
 
-    if 'name' in act:
+    if 'load' in act:
         pkt = saved_pkts[act['name']]
     else:
         pkt = create_packet(act)
