@@ -8,6 +8,7 @@ import logging
 import ipaddress
 import inspect
 import string
+import threading
 from scapy.layers.all import * 
 from scapy.sendrecv import *
 from enum import Enum
@@ -374,6 +375,34 @@ def create_packet(act):
     return pkt
 
 
+
+
+def _recv_thread_log(pkt, flow_name, file_handle):
+    if not pkt.haslayer(IP):
+        return
+
+    src = pkt[IP].src
+    dst = pkt[IP].dst
+    proto = 'TCP' if pkt.haslayer(TCP) else 'UDP' if pkt.haslayer(UDP) else pkt[IP].proto
+    sport = pkt[TCP].sport if pkt.haslayer(TCP) else pkt[UDP].sport if pkt.haslayer(UDP) else ''
+    dport = pkt[TCP].dport if pkt.haslayer(TCP) else pkt[UDP].dport if pkt.haslayer(UDP) else ''
+    payload = ''
+    if pkt.haslayer(Raw):
+        try:
+            payload = pkt[Raw].load.decode('utf8', errors='replace')
+        except Exception:
+            payload = pkt[Raw].load.hex()
+    elif pkt.haslayer(RTP):
+        payload = repr(pkt[RTP])
+    else:
+        payload = pkt.summary()
+
+    ts = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+    file_handle.write(f">>> {ts} {flow_name} {src}:{sport} -> {dst}:{dport} {proto}\n")
+    file_handle.write(f"{payload}\n")
+    file_handle.flush()
+
+
 # -----------------------------------------------------------
 #                         Sub Actions
 # -----------------------------------------------------------
@@ -416,6 +445,26 @@ def l7_verify(pkt, fl, act):
 
 
 
+def _recv_thread_worker(flow_name, peer_flow_name, queue_obj, filename, stop_event):
+    fl = flows[flow_name]
+    peer_flow = flows[peer_flow_name]
+    with open(filename, 'w', encoding='utf8') as out:
+        out.write(f">>> recv_thread started for flow {flow_name}, peer_flow {peer_flow_name}\n")
+        out.flush()
+        while not stop_event.is_set():
+            try:
+                pkt = queue_obj.get(block=True)
+            except queue.Empty:
+                continue
+            if l3_l4_match(pkt, fl, {'flow': flow_name}):
+                update_l3_l4(fl, pkt)
+                if pkt.haslayer(TCP):
+                    ack_act = {'flow': flow_name, 'flags': 'A'}
+                    do_send(ack_act, 0)
+                _recv_thread_log(pkt, flow_name, out)
+
+
+
 
 # -----------------------------------------------------------
 #                          Actions
@@ -427,9 +476,53 @@ def do_delay(act, c):
     return c+1
 
 
+def do_recv_thread(act, c):
+    if 'flow' not in act:
+        raise Error('recv_thread action requires flow')
+    if 'peer_flow' not in act:
+        raise Error('recv_thread action requires peer_flow')
+
+    flow_name = act['flow']
+    peer_flow_name = act['peer_flow']
+    if flow_name not in flows:
+        raise Error(f"Unknown flow: {flow_name}")
+    if peer_flow_name not in flows:
+        raise Error(f"Unknown peer_flow: {peer_flow_name}")
+
+    filename = act.get('file', f"recv_thread_{flow_name}.txt")
+
+    if flow_name in recv_threads:
+        genlog.warning(f"recv_thread '{flow_name}' already running")
+        return c+1
+
+    q = queue.Queue()
+    stop_event = threading.Event()
+    thread = threading.Thread(target=_recv_thread_worker, args=(flow_name, peer_flow_name, q, filename, stop_event), 
+                              daemon=True, name=f"recv_thread-{flow_name}")
+
+    recv_thread_queues.append(q)
+    recv_threads[flow_name] = {
+        'thread': thread,
+        'queue': q,
+        'stop': stop_event,
+        'file': filename,
+        'flow': flow_name,
+        'peer_flow': peer_flow_name,
+    }
+    thread.start()
+    genlog.info(f"started recv_thread-{flow_name} for flow '{flow_name}' peer_flow '{peer_flow_name}' logging to {filename}")
+    return c+1
+
 
 def do_recv(act, c):
-    fl = flows[act['flow']]
+    if 'flow' not in act:
+        raise Error('recv action requires flow')
+
+    flow_name = act['flow']
+    if flow_name not in flows:
+        raise Error(f"Unknown flow: {flow_name}")
+
+    fl = flows[flow_name]
     genlog.debug("\n{} on intf {}".format(inspect.stack()[0][3], fl.intf))
     to = eval(act['timeout']) if 'timeout' in act else RCV_TIMEOUT
     
@@ -481,6 +574,7 @@ def do_recv(act, c):
             genlog.warning(f"WARNING: Unknown action:{x}")
 
         return c+1
+
 
 def do_send(act, c):
     genlog.debug("\n{} called from {}".format(inspect.stack()[0][3],inspect.stack()[1][3]))
@@ -623,6 +717,7 @@ actions = {
         "delay"      : do_delay,
         "send"       : do_send,
         "recv"       : do_recv,
+        "recv_thread": do_recv_thread,
         "create"     : do_create,
         "loop-start" : do_loop_start,
         "loop-end"   : do_loop_end,
@@ -672,6 +767,9 @@ def pkt_dbg_print(pkt):
 
 def pkt_cb(pkt):
     rcvqueue.put(pkt)
+    if 'recv_thread_queues' in globals():
+        for q in recv_thread_queues:
+            q.put(pkt)
     if pktlog.isEnabledFor(logging.DEBUG):
         pkt_dbg_print(pkt)
 
@@ -719,6 +817,8 @@ def setup(flows_dict, routes_f, params_f, pcap_f, proto):
     global fname
     global sniffer
     global rcvqueue
+    global recv_thread_queues
+    global recv_threads
     global recv          # last received packet
     global ip2dev_tbl
     global flows
@@ -740,8 +840,10 @@ def setup(flows_dict, routes_f, params_f, pcap_f, proto):
                 globals()['params'] = {}
             params.update(yaml.full_load(f))
 
-    rcvqueue       = queue.Queue()  
-    saved_pkts     = {}
+    rcvqueue           = queue.Queue()
+    recv_thread_queues = []
+    recv_threads       = {}
+    saved_pkts         = {}
 
     intfs = set()
     hosts = set()
@@ -760,6 +862,11 @@ def setup(flows_dict, routes_f, params_f, pcap_f, proto):
    
 
 def stop():
+    if recv_threads:
+       for thread_info in recv_threads.values():
+           thread_info['stop'].set()
+       for thread_info in recv_threads.values():
+           thread_info['thread'].join(timeout=1)
     if sniffer:
         pktlst = sniffer.stop()
         if (fname):
