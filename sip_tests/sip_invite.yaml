@@ -53,3 +53,6 @@ scenario:
       Content-Type: application/sdp\r\n
       \r\n
       {body}
+
+-recv:
+  flow: 's2c'
