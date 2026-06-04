@@ -30,22 +30,20 @@ def route_f():
 def flows(flows_obj):
     client_ip = '192.168.16.53'
     server_ip = '100.100.16.53'
+    client_rtp= random.randint(10000,20000)
+    server_rtp= random.randint(10000,20000)
 
-    flows_obj['c2s']['src'] = client_ip
-    flows_obj['s2c']['src'] = server_ip
+    flows_obj['s2c']['src']        = server_ip
+    flows_obj['s2c']['sport']      = 5060
+    flows_obj['s2c']['proto']      = 'tcp'
+    flows_obj['c2s']['src']        = client_ip
+    flows_obj['c2s']['sport']      = random.randint(8000,9999) 
+    flows_obj['c2s']['proto']      = 'tcp'
+
+    flows_obj.update({'c2s_rtp' :{'src':client_ip, 'sport':client_rtp}})
+    flows_obj.update({'s2c_rtp' :{'src':server_ip, 'sport':server_rtp}})
+    flows_obj.update({'c2s_rtcp':{'src':client_ip, 'sport':client_rtp+1}})
     return flows_obj
-
-
-def flows_dstnat(flows_obj):
-    client_ip = '192.168.16.53'
-    server_ip = '100.100.16.53'
-    client_dst= '100.100.1.1'
-
-    flows_obj['c2s']['src'] = client_ip
-    flows_obj['c2s']['dst'] = client_dst
-    flows_obj['s2c']['src'] = server_ip
-    return flows_obj
-
 
 
 def run_test (_scen, _flow_adaptor, _route):
@@ -69,10 +67,9 @@ def open_scenario(test_dir, scnfile, root=root_dir):
 
 @pytest.fixture
 def scenario_1():
-    test_dir = "sip_tests"
-    scnfile  = "sip_call.yaml"
+    test_dir = "siptcp_tests"
+    scnfile  = "invite_1.0.yaml"
     return open_scenario(test_dir, scnfile)
-
 
 def test_sip1(route_f, scenario_1):
     run_test(scenario_1, flows, route_f)
@@ -85,20 +82,17 @@ def test_sip1(route_f, scenario_1):
 # 
 # ----------------------------------------------
 
-
 @pytest.fixture
 def scenario_2():
-    test_dir = "sip_predicts"
-    scnfile  = "sip_invite_converted.yaml"
+    test_dir ="siptcp_tests"
+    scnfile = "invite_pan_318464.yaml"
     return open_scenario(test_dir, scnfile)
 
 
-def test_sip2(route_f, scenario_2):
-    run_test(scenario_2, flows, route_f)
+def test_sip2(route_f, scenario_1):
+    run_test(scenario_1, flows, route_f)
 
 
-def test_sip2_1(route_f, scenario_2):
-    run_test(scenario_2, flows_dstnat, route_f)
 
 # ----------------------------------------------
 # 
@@ -108,14 +102,13 @@ def test_sip2_1(route_f, scenario_2):
 
 @pytest.fixture
 def scenario_3():
-    test_dir = "sip_tests"
-    scnfile  = "sip_parent_child_test.yaml"
+    test_dir = "siptcp_tests"
+    scnfile  = "invite_5.1.yaml"
     return open_scenario(test_dir, scnfile)
 
 
 def test_sip3(route_f, scenario_3):
-    run_test(scenario_3, flows_dstnat, route_f)
-
+    run_test(scenario_3, flows, route_f)
 
 
 # ----------------------------------------------
@@ -125,34 +118,13 @@ def test_sip3(route_f, scenario_3):
 # ----------------------------------------------
 
 @pytest.fixture
-def scenario_4():
-    test_dir = "sip_tests"
-    scnfile  = "sip_register.yaml"
+def scenario_3():
+    test_dir = "siptcp_tests"
+    scnfile  = "sip_call.yaml"
     return open_scenario(test_dir, scnfile)
 
 
-def test_sip4(route_f, scenario_4):
-    run_test(scenario_4, flows_dstnat, route_f)
-    replay_data.save_recv()
+def test_sip3(route_f, scenario_3):
+    run_test(scenario_3, flows, route_f)
 
-
-
-# ----------------------------------------------
-# 
-#                  Test 5
-# 
-# ----------------------------------------------
-
-@pytest.fixture
-def scenario_5():
-    test_dir = "sip_tests"
-    scnfile  = "sip_invite.yaml"
-    return open_scenario(test_dir, scnfile)
-
-def test_sip5(route_f, scenario_5):
-    run_test(scenario_5, flows, route_f)
-
-
-def test_sip5_1(route_f, scenario_5):
-    run_test(scenario_5, flows_dstnat, route_f)
 
