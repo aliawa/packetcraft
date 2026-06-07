@@ -108,6 +108,7 @@ Receive Actions
 - search and exec are lists
 - match is not a list
 - Add a receive action even if no data needs to be extracted to update the TCP ACK counter
+- recv_thread starts a background logger thread for a flow and writes any received packet payloads to a text file
 
 When receive fails, exception is thrown to indicate that the test has failed
 
@@ -237,24 +238,34 @@ Commands
 
       - loop-end:
 
-
 - echo
     Debugging help
     echo: "blah blah"
 
 
-# save fragments for later use
 - save:
-    body1: | 
-      v=0\r\n
-      o=user1 53655765 2353687637 IN IP4 {c2s.src}\r\n
-      s=-\r\n
-      c=IN IP4 {c2s.src[:2]}
-    body2: |
-      {c2s.src[3:]}\r\n
-      t=0 0\r\n
-      m=audio {random_num(10000,15000)} RTP/AVP 0\r\n
-      a=rtpmap:0 PCMU/8000\r\n
+    Save fragments for later use
+    Example
+        body1: | 
+          v=0\r\n
+          o=user1 53655765 2353687637 IN IP4 {c2s.src}\r\n
+          s=-\r\n
+          c=IN IP4 {c2s.src[:2]}
+        body2: |
+          {c2s.src[3:]}\r\n
+          t=0 0\r\n
+          m=audio {random_num(10000,15000)} RTP/AVP 0\r\n
+          a=rtpmap:0 PCMU/8000\r\n
+
+- recv_thread
+    start a background receiver thread on the interface. Save all packets received in a file 
+    file: <name> - save as "<name>" instead of "recv_{flow_name}.log"
+
+
+- delay:
+    Adds the given delay to scenario
+    timeout: 5 - time in milliseconds
+
 
 
 Implementation
