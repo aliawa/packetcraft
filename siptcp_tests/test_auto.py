@@ -50,6 +50,7 @@ def run_test (_scen, _flow_adaptor, _route):
     replay_data.setup(_flow_adaptor(_scen['flows']), _route, None, None, None)
     time.sleep(1)
     replay_data.run_scenario(_scen['scenario'])
+    replay_data.stop()
 
 
 def open_scenario(test_dir, scnfile, root=root_dir):

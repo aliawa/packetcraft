@@ -37,7 +37,7 @@ scenario:
 
 - send:
     flow: c2s
-    data: INVITE sip:1028@10.1.1
+    data: INVITE sip:1028@{c2s.dst[:len(c2s.dst)//2]}
 
 
 - save:
@@ -53,13 +53,13 @@ scenario:
 - send:
     flow: c2s
     data: |
-      .49:5060 SIP/2.0\r\n
-      Via: SIP/2.0/TCP {c2s.src}:5060;branch=z9hG4bK-12880-1-0\r\n
-      From: 1024 <sip:1024@{c2s.src}:5060>;tag=12880SIPpTag001\r\n
+      {c2s.dst[len(c2s.dst)//2:]}:5060 SIP/2.0\r\n
+      Via: SIP/2.0/TCP {c2s.src}:{c2s.sport};branch=z9hG4bK-12880-1-0\r\n
+      From: 1024 <sip:1024@{s2c.src}:{s2c.sport}>;tag=12880SIPpTag001\r\n
       To:  <sip:1028@{s2c.src}:{s2c.sport}>\r\n
       Call-ID: 2-12880@{c2s.src}\r\n
       CSeq: 1 INVITE\r\n
-      Contact: sip:1024@{c2s.src}:5060\r\n
+      Contact: sip:1024@{c2s.src}:{c2s.sport}\r\n
       Max-Forwards: 70\r\n
       Subject: Performance Test 1\r\n
       Content-Type: application/sdp\r\n

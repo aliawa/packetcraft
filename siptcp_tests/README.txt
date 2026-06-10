@@ -1,11 +1,9 @@
-## FW configs for Nat scenarios
-
-debug dataplane nat static-mapping add from-ip 192.168.0.113 from-port 6000 to-ip 122.100.200.115 to-port 61000
-debug dataplane nat static-mapping add from-ip 192.168.0.113 from-port 5060 to-ip 122.100.200.115 to-port 50060
-
-
-
 ## Test descriptions
+
+# A TCP segment that causes decoder to generat only one field and it is not ended. 
+# This scenario was not handled in ALG2.0
+    register_unended_field_test.yaml
+
 
 register_large_10.3.0.yaml
 register_large_10.3.1.yaml
@@ -14,17 +12,26 @@ register_large_10.3.3.noproxy.yaml          Assembling 44 segments and sending t
 register_large_10.3.5.yaml
 
 invite_1.yaml                           complete invite in single tcp segment 
-invite_2.1.yaml                         request-uri after @
-invite_2.yaml                           request-uri ip 
-invite_3.1.yaml                         Via TCP
-invite_3.2.yaml                         Via IP
-invite_3.3.yaml                         Via just before \r\n
-invite_3.4.yaml                         Via after \r, \n in next segment
-invite_3.5.yaml                         After complete Via header
-invite_5.1.1.yaml                       Content-Length just before \r\n
-invite_5.1.yaml                         Content-Length value
-invite_5.2.yaml                         Content-Length after \r
-invite_5.3.yaml                         Content-Length complete 
+
+Request URI
+    invite_2.1.yaml                         request-uri after @
+    invite_2.yaml                           request-uri ip 
+Via
+    invite_3.1.yaml                         Via TCP
+    invite_3.2.yaml                         Via IP
+    invite_3.3.yaml                         Via just before \r\n
+    invite_3.4.yaml                         Via after \r, \n in next segment
+    invite_3.5.yaml                         After complete Via header
+
+Content-Length
+    invite_5.1.1.yaml                       Content-Length just before \r\n
+    invite_5.1.yaml                         Content-Length value
+    invite_5.2.yaml                         Content-Length after \r
+    invite_5.3.yaml                         Content-Length complete 
+    invite_5.8.yaml                         Content-Length: value ./. \r\n
+
+A segment that results in only one Un-ended field
+
 invite_5.4.yaml                         Empty line between header and sdb is \r
 invite_5.5.yaml                         Empty line between header and sdb is complete
 invite_5.6.yaml                         c= ip 
@@ -35,7 +42,6 @@ invite_5.7.2.yaml                       From IP
 invite_5.7.3.yaml                       Header after content-length and body is separated
 invite_5.7.4.yaml                       Header after content-length and Contact split after \r
 invite_5.7.5.yaml                       Header after content-length, content-length value is split
-invite_5.8.yaml                         Content-Length: value ./. \r\n
 invite_8.1.yaml                         c= ip is split
 invite_8.2.yaml                         t= value is split
 invite_8.3.yaml                         o= ip is split

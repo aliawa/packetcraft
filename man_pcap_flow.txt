@@ -6,9 +6,15 @@
 
 Required Modules
     ruamel                          apt install python3-ruamel.yaml
+                                    python -m pip install ruamel.yaml
 
 Usage:
     python3 pcap_flow.py -pc 3286 -ipc 192.168.1.49 -o flow_c2s -r rx tx
+
+Options:
+    -o flow_c2s or flow_s2c
+       detail_c2s or detail_s2c
+       scenario
 
 Description:
     The script filters out the stream to plot based on client ip and port. 
