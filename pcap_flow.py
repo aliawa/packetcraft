@@ -269,7 +269,12 @@ def print_scenario(pcap, args):
             payload = pkt[Raw].load.decode('utf8')
             for r in (("\r","\\r"),("\n","\\n\n")):
                 payload = payload.replace(*r)
-            act['data'] = payload
+
+            if output_map[flow][1] == 'recv':
+                act['match'] = payload.splitlines()[0]
+            else:
+                act['data'] = payload
+
         elif TCP in pkt:
             act['flags'] = pkt.sprintf("%TCP.flags%")
 
