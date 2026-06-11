@@ -9,7 +9,10 @@ import ipaddress
 import inspect
 import string
 import threading
-from scapy.layers.all import * 
+import socket
+import json
+import os
+from scapy.layers.all import *
 from scapy.sendrecv import *
 from enum import Enum
 from textwrap3 import indent
@@ -97,6 +100,76 @@ class NoRoute(Error):
 
 class MyValueError(Exception):
     pass
+
+
+# --------------------------------------------------------------------------
+#                              Peer IPC Globals
+# --------------------------------------------------------------------------
+# Populated by setup_peers(); declared here so action handlers can reference them.
+peers           = {}   # name -> {'socket': path}
+peer_socket     = None # bound UDS SOCK_DGRAM socket owned by this process
+peer_event_q    = None # queue.Queue of received peer messages (dicts)
+peer_recv       = {}   # event_name -> payload string (mirrors recv[] dict)
+_my_peer_name_v = None # name of the peer entry this process owns
+
+
+def _my_peer_name():
+    return _my_peer_name_v
+
+
+def setup_peers(peers_dict):
+    """Bind a UDS datagram socket for the peer entry this process owns,
+    then start a background listener thread that feeds peer_event_q."""
+    global peers, peer_socket, peer_event_q, peer_recv, _my_peer_name_v
+
+    peers        = peers_dict or {}
+    peer_event_q = queue.Queue()
+    peer_recv    = {}
+    peer_socket  = None
+
+    if not peers:
+        return
+
+    # Try to bind each declared socket path; the first one that succeeds
+    # is "ours".  The others belong to remote processes.
+    for name, cfg in peers.items():
+        path = cfg.get('socket', '')
+        if not path:
+            continue
+        try:
+            s = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+            if os.path.exists(path):
+                os.unlink(path)
+            s.bind(path)
+            peer_socket     = s
+            _my_peer_name_v = name
+            genlog.info(f"Peer IPC: bound socket '{path}' as peer '{name}'")
+            break
+        except OSError as e:
+            s.close()
+            genlog.debug(f"Peer IPC: cannot bind '{path}': {e}")
+
+    if peer_socket is None:
+        genlog.warning("Peer IPC: no peer socket could be bound — send_peer/recv_peer will not work")
+        return
+
+    t = threading.Thread(target=_peer_listener, daemon=True, name="peer-listener")
+    t.start()
+
+
+def _peer_listener():
+    """Background daemon thread: read datagrams from peer_socket and enqueue them."""
+    while True:
+        try:
+            data, _ = peer_socket.recvfrom(65535)
+            msg = json.loads(data.decode('utf-8'))
+            genlog.debug(f"peer_listener: received {msg}")
+            peer_event_q.put(msg)
+        except OSError:
+            # Socket was closed (process shutting down)
+            break
+        except Exception as e:
+            genlog.warning(f"peer_listener error: {e}")
 
 
 # --------------------------------------------------------------------------
@@ -708,6 +781,106 @@ def do_noop(act, c):
     return c+1
 
 
+def do_send_peer(act, c):
+    """Send a named event (with optional payload) to another replay_data process
+    via Unix Domain Socket datagram.
+
+    YAML:
+        - send_peer:
+            name: peer2        # destination peer name (must be in peers: dict)
+            event: invite      # event label
+            data: "{c2s.src}"  # optional; same {field} interpolation as send:
+    """
+    if 'name' not in act:
+        raise Error("send_peer requires 'name'")
+    if 'event' not in act:
+        raise Error("send_peer requires 'event'")
+
+    peer_name = act['name']
+    event     = act['event']
+    raw_data  = act.get('data', '')
+
+    if peer_name not in peers:
+        raise Error(f"send_peer: unknown peer '{peer_name}'")
+
+    # Apply {{field}} interpolation identical to create_packet()
+    patrn   = re.compile(r'\{([^}]+)\}')
+    payload = patrn.sub(lambda m: str(flds_eval(m.group(1))), str(raw_data))
+
+    dest_path = peers[peer_name]['socket']
+    msg_bytes = json.dumps({
+        'event': event,
+        'data' : payload,
+        'from' : _my_peer_name(),
+    }).encode('utf-8')
+
+    # Use a temporary unbound socket for sending so we don't need a second
+    # bound socket; the receiver identifies us by the 'from' field in the JSON.
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+    try:
+        s.sendto(msg_bytes, dest_path)
+        genlog.info(f"send_peer -> '{peer_name}' event='{event}' data='{payload}'")
+    except OSError as e:
+        raise Error(f"send_peer: failed to send to '{peer_name}' ({dest_path}): {e}")
+    finally:
+        s.close()
+
+    return c + 1
+
+
+def do_recv_peer(act, c):
+    """Block until a named event arrives from another replay_data process.
+
+    YAML:
+        - recv_peer:
+            event: invite      # event label to wait for
+            name: peer1        # optional: only accept from this peer
+            timeout: 10        # seconds (default RCV_TIMEOUT)
+
+    Received payload is stored in peer_recv[event_name] (string).
+    """
+    if 'event' not in act:
+        raise Error("recv_peer requires 'event'")
+
+    if peer_event_q is None:
+        raise Error("recv_peer: peer IPC not initialised (no peers: section?)")
+
+    event     = act['event']
+    from_peer = act.get('name', None)
+    to        = act.get('timeout', RCV_TIMEOUT)
+    deadline  = time.time() + to
+
+    # Stash messages that don't match so we can put them back afterwards
+    stash = []
+
+    try:
+        while True:
+            remaining = deadline - time.time()
+            if remaining <= 0:
+                raise Error(f"recv_peer timeout waiting for event '{event}'")
+            try:
+                msg = peer_event_q.get(timeout=min(remaining, 0.5))
+            except queue.Empty:
+                if time.time() >= deadline:
+                    raise Error(f"recv_peer timeout waiting for event '{event}'")
+                continue
+
+            if msg.get('event') != event:
+                stash.append(msg)
+                continue
+            if from_peer and msg.get('from') != from_peer:
+                stash.append(msg)
+                continue
+
+            # Match found
+            globals()['peer_recv'][event] = msg.get('data', '')
+            genlog.info(f"recv_peer <- '{msg.get('from')}' event='{event}' data='{msg.get('data','')}'")
+            return c + 1
+    finally:
+        # Return non-matching messages to the queue in original order
+        for m in stash:
+            peer_event_q.put(m)
+
 
 # --------------------------------------------------------------------------
 #                                  DRIVER
@@ -724,7 +897,9 @@ actions = {
         "save"       : do_save,
         "execute"    : do_execute,
         "connect"    : do_connect,
-        "noop"       : do_noop
+        "noop"       : do_noop,
+        "send_peer"  : do_send_peer,
+        "recv_peer"  : do_recv_peer,
         }
 
 
@@ -809,7 +984,7 @@ def init(logl):
     setup_logging(logl)
 
 
-def setup(flows_dict, routes_f, params_f, pcap_f, proto):
+def setup(flows_dict, routes_f, params_f, pcap_f, proto, peers_dict=None):
     # global dicts
     global routing
     global routing_type
@@ -859,9 +1034,13 @@ def setup(flows_dict, routes_f, params_f, pcap_f, proto):
     fltr=' or '.join(map(lambda x: "host "+x, list(hosts)))
     sniffer = AsyncSniffer(prn=pkt_cb, filter=fltr, iface=list(intfs), store=(fname != None))
     sniffer.start()
+
+    # Peer IPC — must come after flows are built so {field} interpolation works
+    setup_peers(peers_dict)
    
 
 def stop():
+    global peer_socket
     if recv_threads:
        for thread_info in recv_threads.values():
            thread_info['stop'].set()
@@ -872,6 +1051,18 @@ def stop():
         if (fname):
             actlog.info(f"pcap saved: {fname}")
             wrpcap(fname, pktlst)
+    if peer_socket:
+        path = peer_socket.getsockname()
+        try:
+            peer_socket.close()
+        except OSError:
+            pass
+        try:
+            if path and os.path.exists(path):
+                os.unlink(path)
+        except OSError:
+            pass
+        peer_socket = None
 
 
 def set_flow(flow_name, attr, val):
@@ -917,10 +1108,11 @@ if __name__ == '__main__':
         scen_dict = yaml.full_load(f)
 
     try:
+        peers_dict = scen_dict.get('peers', None)
         if args.src_routes:
-            setup(scen_dict['flows'], args.src_routes, args.params, fname, args.proto)
+            setup(scen_dict['flows'], args.src_routes, args.params, fname, args.proto, peers_dict)
         else:
-            setup(scen_dict['flows'], args.dst_routes, args.params, fname, args.proto)
+            setup(scen_dict['flows'], args.dst_routes, args.params, fname, args.proto, peers_dict)
        
 
     except KeyError as inst:

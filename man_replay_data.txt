@@ -266,8 +266,40 @@ Commands
           a=rtpmap:0 PCMU/8000\r\n
 
 - recv_thread
-    start a background receiver thread on the interface. Save all packets received in a file 
+    start a background receiver thread on the interface. Save all packets received in a file
     file: <name> - save as "<name>" instead of "recv_{flow_name}.log"
+
+
+- send_peer:
+    Send a named event (with optional payload) to another replay_data.py process running
+    on the same host.  Communication uses Unix Domain Socket datagrams — no external
+    broker or open TCP/UDP ports are required.
+
+    name: <peer>    # destination peer name (must be declared in the peers: section)
+    event: <label>  # event label; the receiver matches on this string
+    data: <text>    # optional payload; supports the same {field} interpolation as send:
+
+    Example:
+        - send_peer:
+            name: callee
+            event: invite
+            data: "{c2s.src}:{c2s.sport}"
+
+
+- recv_peer:
+    Block until a named event arrives from another replay_data.py process.
+    The received payload is stored in peer_recv[<event>] and can be used in
+    subsequent exec: or verify: steps.
+
+    event: <label>  # event label to wait for
+    name: <peer>    # optional: only accept the event from this specific peer
+    timeout: <sec>  # seconds to wait (default: RCV_TIMEOUT = 10)
+
+    Example:
+        - recv_peer:
+            name: caller
+            event: invite
+            timeout: 20
 
 
 - delay:
@@ -368,6 +400,48 @@ When destination based routing is used each entry specifies the egress-interface
 mac address for each destination netmask
 
 The interface dictionary tells the script how to configure the sniff filter for each interface
+=======
+
+Peers
+-----
+Peers are other replay_data.py processes running on the same host that this
+process can exchange named events with.  Declare them at the top of the
+scenario YAML file alongside flows:
+
+    peers:
+      caller:
+        socket: /tmp/replay_caller.sock   # this process listens here
+      callee:
+        socket: /tmp/replay_callee.sock   # remote process listens here
+
+Each process declares ALL peer entries (its own and the remote ones).
+The process automatically determines which socket is "its own" by trying to
+bind each path; the first successful bind wins.  The others are treated as
+remote destinations.
+
+Socket files are created at startup and removed when the process exits.
+
+Accessing received peer data:
+    peer_recv['invite']   # payload of the last received 'invite' event
+
+
+Scenario
+--------
+A scenario consists of two parts.
+    1. Flows
+    2. packet exchange and verification rules
+
+Flows:
+Flows are like UDP/TCP connections used in the scenario. A flow is completely
+specified by the usual 5-tuple. A server flow does not need to be completely
+specified, the destination address/port can be populated when the first
+client packet is received.
+
+Packet exchange and verification rules:
+The yaml file describes the content of the packets to be sent, and verification
+rules when a packet is received. These rules can contain, regular expressions, 
+exact text matches, fields extracted from payload or fields read from an 
+external parameters files.
 
 
 
