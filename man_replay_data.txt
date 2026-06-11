@@ -6,7 +6,7 @@
 replay data tool can be used to replay a scenario described in a yaml file.
 
 Usage:
-replay_data.py -t test.yaml -r routing_conf.yaml -l INFO
+    replay_data.py -t test.yaml -r routing_conf.yaml -l INFO
 
 
 Need for a protocol traffic generator
@@ -40,38 +40,31 @@ Features
 
 
 
-Packet Payload
+Command line options
 ----------------------------------------------------------------------
-Data can be of three types
-- text
-- text with fields
-- binary.
-- rtp 
+-pr 
+    Specify transport protocol. It can be specified as 'udp' or 'tcp'
 
-Fields can be inserted that were extracted from the received packets.
+-l DEBUG 
+    in debug mode, all sent and received packets are dumped into packet.log file
 
-If the spaces are important in the data, for example in case of formated xml
-use "data: |", otherwise use "data: |-". "|-" will strip extra white spaces
+-s, --savepcap
+    Save sent packets to <test-file-name>_send.pcap.
+    the saved pcap can be used for tcpreplay
 
-use "data: |2" to tell how many indent spaces, this is usefull if the payload starts
-with spaces
-Example: 
-- send:
-    flow: c2s
-    data: |2
-      \n
-      x-my=0\r\n
 
-injecting data in L7 payload:
-Following forms are supported:
-- {<flow_name>.<Flow field>}
-- {<field name from 'payload' dictionary>}
-Addition, subtraction, multiplication and division are supported
-- {c2s.dport + 1}
 
-Example:
-Transport: RTP/AVP/UDP;unicast;client_port={client_rtp}-{client_rtcp};server_port={s2c_rtp.sport}-{s2c_rtcp.sport}
+Scenario
+--------
+A scenario consists of two parts.
+    1. Flows
+    2. packet exchange and verification rules
 
+Packet exchange and verification rules:
+The yaml file describes the content of the packets to be sent, and verification
+rules when a packet is received. These rules can contain, regular expressions, 
+exact text matches, fields extracted from payload or fields read from an 
+external parameters files.
 
 
 Flow
@@ -102,40 +95,63 @@ tos:
 if tos is specified, it will be inserted into the IP header
 
 
-
-Receive Actions
+Packet Payload
 ----------------------------------------------------------------------
-- search and exec are lists
-- match is not a list
-- Add a receive action even if no data needs to be extracted to update the TCP ACK counter
-- recv_thread starts a background logger thread for a flow and writes any received packet payloads to a text file
+data: field can be of three types
+- text
+- text with fields
+- binary.
+- rtp 
 
-When receive fails, exception is thrown to indicate that the test has failed
+Fields can be inserted that were extracted from the received packets.
+
+If the spaces are important in the data, for example in case of formated xml
+use "data: |", otherwise use "data: |-". "|-" will strip extra white spaces
+
+use "data: |2" to tell how many indent spaces, this is usefull if the payload starts
+with spaces
+Example: 
+- send:
+    flow: c2s
+    data: |2
+      \n
+      x-my=0\r\n
+
+injecting data in L7 payload:
+Following forms are supported:
+   {<flow_name>.<Flow field>}
+Any valid python expression can be used
+   {c2s.dport + 1}
+Any dictionary, see "Dictionaries" section
+
+Example:
+Transport: RTP/AVP/UDP;unicast;client_port={recv['client_rtp']}-{recv['client_rtcp']};server_port={s2c_rtp.sport}-{s2c_rtcp.sport}
 
 
 
-Dictionaries avaialable for commands
+Dictionaries 
 ----------------------------------------------------------------------
-    objects:
-        All flow names become global objects
-        c2s.dst
-        s2c.src 
+objects:
+    All flow names become global objects
+    c2s.dst
+    s2c.src 
 
-    recv dicts:
-        recv[]:
-        search fields will go into the global dict 'recv' by default
-        if the search field is 'rtp_port' then it will be accessed as recv['rtp_port']
-        if the recv action has a name then the search field will go in the named dict
-        for example if the recv action is named inv then the field will be accessed as inv['dport']
+recv dicts:
+    recv[]:
+    search fields will go into the global dict 'recv' by default
+    if the search field is 'rtp_port' then it will be accessed as recv['rtp_port']
+    if the recv action has a name then the search field will go in the named dict
+    for example if the recv action is named inv then the field will be accessed as inv['dport']
 
-        pkt: 
-        The last received packet. All scapy accessors will work
-               pkt[Raw].len 
-               pkt[IP].src
-               pkt[TCP].sport
-        param:
-            the param dictionary specified by "-p params.yaml" on the command line
-            match: 'REGISTER sip:{param.ruri_ip} SIP/2.0'
+pkt: 
+    The last received packet. All scapy accessors will work
+           pkt[Raw].len 
+           pkt[IP].src
+           pkt[TCP].sport
+    param:
+        the param dictionary specified by "-p params.yaml" on the command line
+        match: 'REGISTER sip:{param.ruri_ip} SIP/2.0'
+
 
 
 Helper functions:
@@ -144,21 +160,6 @@ Helper functions:
     is_valid_ip4(string)
     is_valid_port(int)
 
-
-
-Define a new global variable 
-----------------------------------------------------------------------
-execute: 
-    - global cid; cid=random_num(10,99)
-
-
-
-Example usage of dictionaries:
-    statement                       Meaning
-    ----------------------------    --------------------------------------
-    c2s.port = '132'                flows['c2s'].port = 132
-    c2s.dst = pkt.src               flows['c2s'].dst = fields['pkt.src']
-    c2s.dst={destination:IP.src}    flows['c2s'].dst = fields['destination'] if 'destination' in fields else fields['IP.src']
 
 
 
@@ -173,9 +174,14 @@ Commands
     used with udp scenarios
 
 - recv:
-    Add a recv action even if no data needs to be extracted to update the ACK
-    counter
+    Add a recv action even if no data needs to be extracted to update the ACK counter
     timeout: timeout in seconds or 'None' if need to wait indefinetly
+    - search and exec are lists
+    - match is not a list
+    - Add a receive action even if no data needs to be extracted to update the TCP ACK counter
+    - recv_thread starts a background logger thread for a flow and writes any received packet payloads to a text file
+
+    When receive fails, exception is thrown to indicate that the test has failed
 
 
 - create:
@@ -202,6 +208,7 @@ Commands
     s2c_rtp.dport=client_rtp
     c2s_rtp.dst={source:pkt.src}
 
+    if condition in exec action
     c2s_rtp.dst = {payload.source : pkt.src}
     c2s_rtp.dst = {source : pkt.src}              # use "source" if source is in "payload" dictionary else use pkt.src
                                                   # from 'pkt' dictionary
@@ -209,6 +216,7 @@ Commands
     c2s_rtp.dst = pkt.src
     c2s_rtp.dst = via_src                         # use default dict 'payload'
     c2s_rtp.dst = payload.via_src                 # dict is specified
+
 
 
 - verify: (list)
@@ -263,12 +271,16 @@ Commands
 
 
 - delay:
-    Adds the given delay to scenario
-    timeout: 5 - time in milliseconds
+    Adds the given delay in milliseconds
+    timeout: 5
+
+- execute: 
+    for example to define a new global variable 
+    - global cid; cid=random_num(10,99)
 
 
 
-Implementation
+Implementation Notes
 ----------------------------------------------------------------------
 Sending packet
   need outgoing intf            use ip2mac
@@ -343,21 +355,6 @@ Parsing L7 protocol
     l7-proto: "RTP"
 
 
-
-Delay in milli-seconds
-----------------------------------------------------------------------
-- delay:
-    timeout: 5
-
-
-Debugging
-----------------------------------------------------------------------
-When -l DEBUG is specified all sent and received packets are dumped into
-packet.log file
-
-
-
-
 Routing
 -------
 replay data uses its own routing rules, and interface confuguration that are 
@@ -370,56 +367,19 @@ mac address for each source ip.
 When destination based routing is used each entry specifies the egress-interface and next-hop
 mac address for each destination netmask
 
-
-Scenario
---------
-A scenario consists of two parts.
-    1. Flows
-    2. packet exchange and verification rules
-
-Flows:
-Flows are like UDP/TCP connections used in the scenario. A flow is completely
-specified by the usual 5-tuple. A server flow does not need to be completely
-specified, the destination address/port can be populated when the first
-client packet is received.
-
-Packet exchange and verification rules:
-The yaml file describes the content of the packets to be sent, and verification
-rules when a packet is received. These rules can contain, regular expressions, 
-exact text matches, fields extracted from payload or fields read from an 
-external parameters files.
+The interface dictionary tells the script how to configure the sniff filter for each interface
 
 
-
-If condition
-----------------------------------------------------------------------
-c2s.dst={destination:IP.src}    flows['c2s'].dst = fields['destination'] if 'destination' in fields else fields['IP.src']
-
-
-
-Convert a long text line to fixed length lines
---------------------------------------------------------------------------------
-Break long output lines from base64 to fixed length lines to include in 
-replay_data.py scenarios
-
-Usage:
-    split_base64.py <output line size>
-Example:
-    base64 dns_resp_local.bin | python3 split_base64.py 79
-Sample use:
-    replay_data.py -t protocol_tests/dns.yaml -r sip_tests/routing_192.yaml -l INFO
-
-
-Out of order packets
-----------------------------------------------------------------------
-TODO, 
 
 
 Example of sending binary packet
 ----------------------------------------------------------------------
-rtp packet it processed using "base64 rtp.bin > rtp.txt"
-- delay:
-    timeout: 100
+1) convert binary packet to base64
+    base64 dns_resp_local.bin 
+2) split long lines to given width for easy pasting
+    python3 split_base64.py 79
+3) Paste output in scenario
+
 - send:
     flow: s2c_rtp
     data: !!binary |
@@ -430,14 +390,8 @@ rtp packet it processed using "base64 rtp.bin > rtp.txt"
       1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV
 
 
-Options
-----------------------------------------------------------------------
--pr 
-    Specify transport protocol. It can be specified as 'udp' or 'tcp'
 
-
-
-Special Cases
+Send-only scenario
 ----------------------------------------------------------------------
 Setup a send only replay through cleartext proxy.
 if we want to add variation in processing packets, for example some 
